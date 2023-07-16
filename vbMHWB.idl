@@ -1,0 +1,675 @@
+// vbMHWB.idl : IDL source for vbMHWB.dll
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (vbMHWB.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+#include "olectl.h"
+
+//(VARIANT_BOOL)0 = VARIANT_FALSE = in vb False
+//(VARIANT_BOOL)1 = VARIANT_TRUE = in vb True
+
+//defined inWTypes.h
+// 0 == FALSE, -1 == TRUE
+//typedef short VARIANT_BOOL;
+
+//Ifaces taken from Microsoft Platform SDK for Windows Server 2003 R2
+//#if _ATL_VER < 0x0800
+//-------------------------------------------------------------------------
+//
+//  INewWindowManager
+//
+//-------------------------------------------------------------------------
+	[
+		uuid(D2BC4C84-3F72-4a52-A604-7BCBF3982CBB), 
+		object,
+		pointer_default(unique)
+	]
+	interface INewWindowManager : IUnknown
+	{
+		HRESULT EvaluateNewWindow([in] LPCWSTR pszUrl, [in] LPCWSTR pszName, 
+								  [in] LPCWSTR pszUrlContext, [in] LPCWSTR pszFeatures, 
+								  [in] BOOL fReplace, [in] DWORD dwFlags,
+								  [in] DWORD dwUserActionTime);
+	};
+
+
+//-------------------------------------------------------------------------
+//
+//  IHTMLOMWindowServices
+//
+//-------------------------------------------------------------------------
+	[
+		object,
+		pointer_default(unique),
+		uuid(3050f5fc-98b5-11cf-bb82-00aa00bdce0b)
+	]
+	interface IHTMLOMWindowServices : IUnknown
+	{
+		HRESULT moveTo([in] LONG x,[in] LONG y);
+		HRESULT moveBy([in] LONG x,[in] LONG y);
+		HRESULT resizeTo([in] LONG x,[in] LONG y);
+		HRESULT resizeBy([in] LONG x,[in] LONG y);
+	};
+//#endif // _ATL_VER < 0x0800
+
+//-------------------------------------------------------------------------
+//
+//  INewWindowManager - Part of IE 6 developement SDK
+//
+//-------------------------------------------------------------------------
+	interface IDownloadManager;
+	[
+		helpstring("IDownloadManager interface"),
+		object,
+		uuid(988934A4-064B-11D3-BB80-00104B35E7F9), // IID_IDownloadManager
+		pointer_default(unique),
+		local
+	]
+	interface IDownloadManager : IUnknown
+	{
+		HRESULT Download(
+			[in] IMoniker *pmk,         // Identifies the object to be downloaded
+			[in] IBindCtx *pbc,         // Stores information used by the moniker to bind 
+			[in] DWORD dwBindVerb,      // The action to be performed during the bind
+			[in] LONG grfBINDF,         // Determines the use of URL encoding during the bind
+			[in] BINDINFO *pBindInfo,   // Used to implement IBindStatusCallback::GetBindInfo
+			[in] LPCOLESTR pszHeaders,  // Additional headers to use with IHttpNegotiate
+			[in] LPCOLESTR pszRedir,    // The URL that the moniker is redirected to
+			[in] UINT uiCP              // The code page of the object's display name
+		);
+	};
+
+	typedef enum WINDOWSHOOK_TYPES
+	{
+		WHT_CALLWNDPROC		= 0,
+		WHT_CBT				= 1,
+		WHT_GETMESSAGE		= 2,
+		WHT_KEYBOARD		= 3,
+		WHT_MOUSE			= 4,
+		WHT_MSGFILTER		= 5,
+		WHT_KEYBOARD_LL		= 6,
+		WHT_MOUSE_LL		= 7,
+		WHT_FOREGROUNDIDLE	= 8,
+		WHT_CALLWNDPROCRET	= 9,
+		WHT_SYSMSGFILTER	= 10
+	}WINDOWSHOOK_TYPES;
+
+	typedef enum DELETE_IE_FILES_FLAGS
+	{
+		DELETE_IE_CACHE		= 0,
+		DELETE_IE_COOKIES	= 1,
+		DELETE_IE_HISTORY	= 2
+	}DELETE_IE_FILES_FLAGS;
+
+	[
+		object,
+		uuid(6E73D516-7CDC-435E-8A8D-86E0AE4D5E08),
+		dual,
+		helpstring("IvbWB Interface"),
+		pointer_default(unique)
+	]
+	interface IvbWB : IDispatch
+	{
+		[propget, id(1), helpstring("Webbrowser count")] HRESULT Count([out, retval] short *pVal);
+		[id(2), helpstring("Remove wb based on given uid")] HRESULT RemoveBrowser([in] short wbUIDToRemove);
+		[id(4), helpstring("Refresh browser")] HRESULT Refresh(short wbUID);
+		[id(5), helpstring("Stop browser")] HRESULT Stop(short wbUID);
+		[id(6), helpstring("GoBack")] HRESULT GoBack(short wbUID);
+		[id(7), helpstring("GoForward")] HRESULT GoForward(short wbUID);
+		[id(8), helpstring("GoHome")] HRESULT GoHome(short wbUID);
+		[id(9), helpstring("Navigate to URL")] HRESULT NavigateSimple([in] short wbUID,[in] BSTR URL);
+		[propget, id(10), helpstring("WebBrowser object")] HRESULT WebBrowser([in] short wbUID, [out, retval] LPDISPATCH *pVal);
+		[propget, id(11), helpstring("LocationURL")] HRESULT LocationURL([in] short wbUID, [out, retval] BSTR *pURL);
+		[propget, id(12), helpstring("Offline - If wbUID bigger than 0, action is of the specific WB.")] HRESULT Offline([in,defaultvalue(0)] short wbUID, [out, retval] VARIANT_BOOL *pVal);
+		[propput, id(12), helpstring("Offline - If wbUID bigger than 0, action is of the specific WB.")] HRESULT Offline([in,defaultvalue(0)] short wbUID, [in] VARIANT_BOOL newVal);
+		[id(13), helpstring("ReadyState")] HRESULT ReadyState([in] short wbUID,[out,retval] READYSTATE *plReadyState);
+		[id(14), helpstring("MSHTML GoSearch")] HRESULT GoSearch([in] short wbUID);
+		[id(15), helpstring("Refresh2")] HRESULT Refresh2([in] short wbUID, [in] VARIANT *level);
+		[propget, id(16), helpstring("Busy")] HRESULT Busy([in] short wbUID, [out, retval] VARIANT_BOOL *pVal);
+		[propget, id(17), helpstring("RegisterAsBrowser - If wbUID bigger than 0, action is of the specific WB.")] HRESULT RegisterAsBrowser([in,defaultvalue(0)] short wbUID, [out, retval] VARIANT_BOOL *pVal);
+		[propput, id(17), helpstring("RegisterAsBrowser - If wbUID bigger than 0, action is of the specific WB.")] HRESULT RegisterAsBrowser([in,defaultvalue(0)] short wbUID, [in] VARIANT_BOOL newVal);
+		[propget, id(18), helpstring("Set to false to prevent any drag-and-drop operations - If wbUID bigger than 0, action is of the specific WB.")] HRESULT RegisterAsDropTarget([in,defaultvalue(0)] short wbUID,[in, defaultvalue((VARIANT_BOOL)0)] VARIANT_BOOL bUseIEDefault, [out, retval] VARIANT_BOOL *pVal);
+		[propput, id(18), helpstring("Set to fasle to prevent any drag-and-drop operations - Set bUseIEDefault to true to use default IE behaviour.")] HRESULT RegisterAsDropTarget([in,defaultvalue(0)] short wbUID,[in, defaultvalue((VARIANT_BOOL)0)] VARIANT_BOOL bUseIEDefault, [in] VARIANT_BOOL newVal);
+		[propget, id(19), helpstring("Default=False. Dialog boxes and messages can be shown. Critical errors and security alerts are not supressed.")] HRESULT Silent([in,defaultvalue(0)] short wbUID, [out, retval] VARIANT_BOOL *pVal);
+		[propput, id(19), helpstring("Default=False. Dialog boxes and messages can be shown. Critical errors and security alerts are not supressed.")] HRESULT Silent([in,defaultvalue(0)] short wbUID, [in, defaultvalue((VARIANT_BOOL)0)] VARIANT_BOOL newVal);
+		[propget, id(20), helpstring("LocationName - Title")] HRESULT LocationName([in] short wbUID, [out, retval] BSTR *pVal);
+		[id(21), helpstring("MSHTML Selects all")] HRESULT SelectAll([in] short wbUID);
+		[id(22), helpstring("MSHTML Paste")] HRESULT Paste([in] short wbUID);
+		[id(23), helpstring("MSHTML Copy")] HRESULT Copy([in] short wbUID);
+		[id(24), helpstring("MSHTML Cut")] HRESULT Cut([in] short wbUID);
+		[id(25), helpstring("MSHTML Undo")] HRESULT Undo([in] short wbUID);
+		[id(26), helpstring("MSHTML Redo")] HRESULT Redo([in] short wbUID);
+		[id(27), helpstring("MSHTML ClearSelection")] HRESULT ClearSelection([in] short wbUID);
+		[id(28), helpstring("MSHTML Delete")] HRESULT Delete([in] short wbUID);
+		[id(29), helpstring("Displays MSHTML default find dialog.")] HRESULT Find([in] short wbUID);
+		[id(30), helpstring("MSHTML PasteSpecial")] HRESULT PasteSpecial([in] short wbUID);
+		[id(31), helpstring("MSHTML Spell")] HRESULT Spell([in] short wbUID);
+		[id(32), helpstring("Displays MSHTML default Properties dialog.")] HRESULT Properties([in] short wbUID);
+		[id(33), helpstring("Opens a new blank webbrowser.")] HRESULT NewWindow([in] short wbUID);
+		[id(34), helpstring("MSHTML FileOpen")] HRESULT FileOpen([in] short wbUID);
+		[id(35), helpstring("MSHTML Save")] HRESULT Save([in] short wbUID);
+		[id(36), helpstring("MSHTML SaveAs")] HRESULT SaveAs([in] short wbUID);
+		[id(37), helpstring("MSHTML Print")] HRESULT Print([in] short wbUID);
+		[id(38), helpstring("MSHTML PrintPreview")] HRESULT PrintPreview([in] short wbUID);
+		[id(39), helpstring("MSHTML PageSetup")] HRESULT PageSetup([in] short wbUID);
+		[id(40), helpstring("Updated Print command.")] HRESULT Print2([in] short wbUID);
+		[id(41), helpstring("Updated Print Preview command.")] HRESULT PrintPreview2([in] short wbUID);
+		[propget, id(42), helpstring("HWNDShellDocObjectView")] HRESULT HWNDShellDocObjectView([in] short wbUID, [out, retval] long *pVal);
+		[propget, id(43), helpstring("HWNDInternetExplorerServer")] HRESULT HWNDInternetExplorerServer([in] short wbUID, [out, retval] long *pVal);
+		[id(44), helpstring("MSHTML ViewSource")] HRESULT ViewSource([in] short wbUID);
+		[id(45), helpstring("MSHTML AddToFavorites")] HRESULT AddToFavorites([in] short wbUID);
+		[id(46), helpstring("Sets focus to a webbrowser.")] HRESULT SetFocusW([in] short wbUID);
+		[id(47), helpstring("Places webbrowser on top of zorder by UI activating the webbrowser.")] HRESULT PlaceWBOnTop([in] short wbUID);
+		[propget, id(48), helpstring("HWND of main dll window where all webbrowsers are hosted.")] HRESULT HWNDMainWnd([out, retval] long *pVal);
+		[id(49), helpstring("Returns the ID of any webbrowser that has focus or 0.")] HRESULT AnyDocHasFocus([out,retval] short *wbUID);
+		[id(50), helpstring("ExecWB")] HRESULT ExecWB([in] short wbUID,[in] long cmdID,[in] long cmdExecOpt,[in,defaultvalue(0)] VARIANT *pvaIn,[in,defaultvalue(0)] VARIANT *pvaOut);
+		[id(51), helpstring("QueryStatusWB")] HRESULT QueryStatusWB([in] short wbUID, [in] long cmdID, [out, retval] long * pcmdf);
+		[propget, id(52), helpstring("Initial startup URL = zero len string. Can be a moniker or an actual URL address.")] HRESULT StartupURL([out, retval] BSTR *pVal);
+		[propput, id(52), helpstring("Initial startup URL. Can be a moniker or an actual URL address.")] HRESULT StartupURL([in] BSTR newVal);
+		[propget, id(53), helpstring("Default=true,only receive FileDownload event, False, receive FileDownloadEx event.")] HRESULT UseIEDefaultFileDownload([in,defaultvalue(0)] short wbUID, [out, retval] VARIANT_BOOL *pVal);
+		[propput, id(53), helpstring("Default=true,only receive FileDownload event, False, receive FileDownloadEx event.")] HRESULT UseIEDefaultFileDownload([in,defaultvalue(0)] short wbUID, [in] VARIANT_BOOL newVal);
+		[propget, id(54), helpstring("property HWNDShellEmbedding")] HRESULT HWNDShellEmbedding([in] short wbUID, [out, retval] long *pVal);
+		[propget, id(55), helpstring("Attempts to return number of frames.")] HRESULT FramesCount([in] short wbUID, [out, retval] long *pVal);
+		[propget, id(56), helpstring("Webbrowser Visible")] HRESULT WBVisible([in] short wbUID, [out, retval] VARIANT_BOOL *pVal);
+		[propput, id(56), helpstring("Webbrowser Visible")] HRESULT WBVisible([in] short wbUID, [in] VARIANT_BOOL newVal);
+		[propget, id(57), helpstring("Application Object")] HRESULT Application([in] short wbUID, [out, retval] LPDISPATCH *pVal);
+		[propget, id(58), helpstring("Main Document dispatch object")] HRESULT Document([in] short wbUID, [out, retval] LPDISPATCH *pVal);
+		[propget, id(59), helpstring("Send dispatch obj for the active element. Accounts for frames.")] HRESULT ActiveElementObj([in] short wbUID, [out, retval] LPDISPATCH *pVal);
+		[propget, id(60), helpstring("Attempts to returns Active Document Dispatch object")] HRESULT ActiveDocumentObj([in] short wbUID, [out, retval] LPDISPATCH *pVal);
+		[id(61), helpstring("Navigate to a URL, file, or pidl.")] HRESULT Navigate2([in] short wbUID, [in] VARIANT *URL, [in,defaultvalue(0)] VARIANT *Flags, [in,defaultvalue(0)] VARIANT *TargetFrameName, [in,defaultvalue(0)] VARIANT *PostData, [in,defaultvalue(0)] VARIANT *Headers);
+		[id(62), helpstring("Navigate to a URL or file.")] HRESULT Navigate([in] short wbUID, [in] BSTR URL, [in,defaultvalue(0)] VARIANT *Flags, [in,defaultvalue(0)] VARIANT *TargetFrameName, [in,defaultvalue(0)] VARIANT *PostData, [in,defaultvalue(0)] VARIANT *Headers);
+		[id(63), helpstring("Attempts to add new webbrowser. If successful, returns the new id contained in wbUID.")] HRESULT AddBrowser([in,out]short *wbUID, [in,defaultvalue(0)] VARIANT_BOOL bBringToFront);
+		[propget, id(64), helpstring("IDispatch object of the webbrowser")] HRESULT ObjectWB([in] short wbUID, [out, retval] LPDISPATCH *pVal);
+		[propget, id(66), helpstring("Default=0 do not display, 1 display all, 2 raise OnContextMenu event. If wbUID bigger than 0, action is of the specific WB.")] HRESULT ContextMenuAction([in,defaultvalue(0)] short wbUID,[out, retval] long *pVal);
+		[propput, id(66), helpstring("Default=0 do not display, 1 display all, 2 raise OnContextMenu event. If wbUID bigger than 0, action is applied only to the specific WB.")] HRESULT ContextMenuAction([in,defaultvalue(0)] short wbUID, [in] long newVal);
+		[propget, id(67), helpstring("Default=_DLIMAGES,_VIDEOS,_BGSOUNDS. Refresh WB for new flags to take effect. If wbUID bigger than 0, flags are of the specific WB.")] HRESULT DocumentDownloadControlFlags([in,defaultvalue(0)] short wbUID,[out, retval] long *pVal);
+		[propput, id(67), helpstring("Default=_DLIMAGES,_VIDEOS,_BGSOUNDS. Refresh WB for new flags to take effect. If wbUID bigger than 0, flags are applied only to the specific WB.")] HRESULT DocumentDownloadControlFlags([in,defaultvalue(0)] short wbUID, [in] long newVal);
+		[propget, id(68), helpstring("Default=TextSelect,No3DBorder,FlatScrollbars. Refresh WB for new flags to take effect. If wbUID bigger than 0, flags are of the specific WB.")] HRESULT DocumentHostUiFlags([in,defaultvalue(0)] short wbUID,[out, retval] long *pVal);
+		[propput, id(68), helpstring("Default=TextSelect,No3DBorder,FlatScrollbars. Refresh WB for new flags to take effect. If wbUID bigger than 0, flags are applied only to the specific WB.")] HRESULT DocumentHostUiFlags([in,defaultvalue(0)] short wbUID, [in] long newVal);
+		[propget, id(69), helpstring("DEFAULT=0, SHOWPROPERTIES = 1, SHOWCODE/Source = 2. Refresh WB for new flags to take effect. If wbUID bigger than 0, value is of the specific WB.")] HRESULT DocumentHostUiDoubleClickAction([in,defaultvalue(0)] short wbUID,[out, retval] long *pVal);
+		[propput, id(69), helpstring("DEFAULT=0, SHOWPROPERTIES = 1, SHOWCODE/Source = 2. Refresh WB for new flags to take effect. If wbUID bigger than 0, value is applied only to the specific WB.")] HRESULT DocumentHostUiDoubleClickAction([in,defaultvalue(0)] short wbUID, [in] long newVal);
+		[id(71), helpstring("Attempts to find a given text in a document. Searches the active doc and able to continue a search. Returns an error if no matches are found.")] HRESULT FindTextSimple([in] short wbUID,[in] BSTR TextToFind,[in] VARIANT_BOOL bDownward,[in] VARIANT_BOOL bMatchWholeWord,[in] VARIANT_BOOL bMatchCase,[in] VARIANT_BOOL bScrollIntoView,[in,out] VARIANT_BOOL *FindMatch);
+		[id(72), helpstring("Attempts to find and heighlight all text in the active document. Accounts for frames. Color example greenyellow")] HRESULT FindAndHighlightAllText([in] short wbUID,[in] BSTR TextToFind,[in] VARIANT_BOOL bMatchWholeWord,[in] VARIANT_BOOL bMatchCase,[in] BSTR HighlightColor,[in,out] long *NumOfMatchsFound);
+		[id(73), helpstring("if FindMatch equals true, we have a match. Searches all frames if doc is frameset.")] HRESULT FindAnyTextMatch([in] short wbUID,[in] BSTR TextToFind,[in] VARIANT_BOOL bMatchWholeWord,[in] VARIANT_BOOL bMatchCase,[in,out] VARIANT_BOOL *FindMatch);
+		[propget, id(74), helpstring("Is frameset")] HRESULT IsDocFrameset([in] short wbUID, [out, retval] VARIANT_BOOL *pVal);
+		[propget, id(75), helpstring("Scheme as string. http, ftp,...")] HRESULT ucScheme([out, retval] BSTR *pVal);
+		[propput, id(75), helpstring("Scheme as string. http, ftp,...")] HRESULT ucScheme([in] BSTR newVal);
+		[propget, id(76), helpstring("HostName")] HRESULT ucHostName([out, retval] BSTR *pVal);
+		[propput, id(76), helpstring("HostName")] HRESULT ucHostName([in] BSTR newVal);
+		[propget, id(77), helpstring("Port")] HRESULT ucPort([out, retval] long *pVal);
+		[propput, id(77), helpstring("Port")] HRESULT ucPort([in] long newVal);
+		[propget, id(78), helpstring("UserName")] HRESULT ucUserName([out, retval] BSTR *pVal);
+		[propput, id(78), helpstring("UserName")] HRESULT ucUserName([in] BSTR newVal);
+		[propget, id(79), helpstring("Password")] HRESULT ucPassword([out, retval] BSTR *pVal);
+		[propput, id(79), helpstring("Password")] HRESULT ucPassword([in] BSTR newVal);
+		[propget, id(80), helpstring("UrlPath")] HRESULT ucUrlPath([out, retval] BSTR *pVal);
+		[propput, id(80), helpstring("UrlPath")] HRESULT ucUrlPath([in] BSTR newVal);
+		[propget, id(81), helpstring("ExtraInfo")] HRESULT ucExtraInfo([out, retval] BSTR *pVal);
+		[propput, id(81), helpstring("ExtraInfo")] HRESULT ucExtraInfo([in] BSTR newVal);
+		[propget, id(82), helpstring("FullURL")] HRESULT ucFullURL([out, retval] BSTR *pVal);
+		[propput, id(82), helpstring("FullURL")] HRESULT ucFullURL([in] BSTR newVal);
+		[propget, id(83), helpstring("FileName")] HRESULT ucFileName([out, retval] BSTR *pVal);
+		[propget, id(84), helpstring("FileExtension")] HRESULT ucFileExtension([out, retval] BSTR *pVal);
+		[id(85), helpstring("Cracks URL into components. Use ucXXX to access various parts.")] HRESULT ucInternetCrackUrl([in] BSTR URL,[in, out] VARIANT_BOOL *bSuccess);
+		[propget, id(86), helpstring("InternetScheme")] HRESULT ucInternetScheme([out, retval] long *pVal);
+		[propput, id(86), helpstring("InternetScheme")] HRESULT ucInternetScheme([in] long newVal);
+		[id(87), helpstring("Uses ucXXX various parts to create a URL")] HRESULT ucInternetCreateUrl([in, out] BSTR *URL);
+		[id(88), helpstring("Cancel a file download using uid passed to client")] HRESULT CancelFileDl([in] short UIDToCancel);
+		[id(89), helpstring("Downloads a URL to a file asynch.")] HRESULT DownloadUrlAsync([in] BSTR URL,[in] BSTR SaveFileName, [in, out] short *DLUID);
+		[id(90), helpstring("Registers/Unregisters this control as a temp HTTP protocol passthrough.")] HRESULT RegisterHTTPprotocol([in] VARIANT_BOOL pVal);
+		[id(91), helpstring("Registers/Unregisters this control as a temp HTTPS protocol passthrough.")] HRESULT RegisterHTTPSprotocol([in] VARIANT_BOOL pVal);
+		[id(92), helpstring("Displays certificate dialog for a valid HTTPS site. This is the same as the user clicking the lock icon in IE6.")] HRESULT DisplayCertificateDialog([in] short wbUID);
+		[id(93), helpstring("Loads HTML content into the document. If content is greater than 256 chars then a <base> tag must be present. Unlike document.write, Scripts are executed.")] HRESULT LoadHTMLFromString([in] short wbUID, [in] BSTR sContent, [in] BSTR sBaseUrl);
+		[id(94), helpstring("Draws a thumbnail picture of WB on a given window.")] HRESULT DrawWBThumbnailOnWnd([in] short wbUID, [in] long WndHdc, [in] long lX, [in] long lY, [in] long lW, [in] long lH);
+		[propget, id(95), helpstring("WBPageTextSize 0(Smallest)-4(Largest)")] HRESULT WBPageTextSize([in,defaultvalue(0)] short wbUID, [out, retval] long *pVal);
+		[propput, id(95), helpstring("WBPageTextSize 0(Smallest)-4(Largest)")] HRESULT WBPageTextSize([in,defaultvalue(0)] short wbUID, [in] long newVal);
+		[id(96), helpstring("Resets all ucxxxx fileds to their default.")] HRESULT ucResetFieldsToDefault(void);
+		[id(97), helpstring("Subclass a Wnd and receive onWMxxxx messages.")] HRESULT SubclassWnd([in] long hwndWnd);
+		[id(98), helpstring("UnSubclass a previously subclassed Wnd.")] HRESULT UnSubclassWnd([in] long hwndWnd);
+		[id(99), helpstring("Add a WM_xxx Message for a subclassed Wnd.")] HRESULT AddMessage([in] long hwndWnd, [in] long lMsg);
+		[id(100), helpstring("A wrapper for SHAutoComplete method. If IsTargetComboBox = True, attempts to find the Edit ctl part.")] HRESULT SetupShellAutoComplete([in] long hwndTarget,[in] VARIANT_BOOL IsTargetComboBox , [in] long lFlags);
+		[id(101), helpstring("Saves webpage as a bitmap file. BitmapName, a fully qualified path+name.bmp")] HRESULT SaveAsBitmap([in] short wbUID,[in] BSTR BitmapName);
+		[id(102), helpstring("Posts data to a given URL and sends notifications via OnPostDataAvailable event.")] HRESULT WBPostData([in] BSTR sURL, [in] BSTR sData, [in, out] short *PostID);
+		[propget, id(103), helpstring("Fires DocumentCompleteWBEx instead of DocumentComplete passing document text.")] HRESULT SourceOnDocComplete([in,defaultvalue(0)] short wbUID, [out, retval] VARIANT_BOOL *pVal);
+		[propput, id(103), helpstring("Fires DocumentCompleteWBEx instead of DocumentComplete passing document text.")] HRESULT SourceOnDocComplete([in,defaultvalue(0)] short wbUID, [in] VARIANT_BOOL newVal);
+		[id(104), helpstring("Displays Organize Favorites dialog.")] HRESULT OrganizeFavorites();
+		[id(105), helpstring("Displays IE options dialog.")] HRESULT ViewIEOptions([in] short wbUID);
+		[id(106), helpstring("Attempts to find and heighlight all text in the document, including frames. Color example greenyellow")] HRESULT FindAndHighlightAllTextFrames([in] short wbUID,[in] BSTR TextToFind,[in] VARIANT_BOOL bMatchWholeWord,[in] VARIANT_BOOL bMatchCase,[in] BSTR HighlightColor,[in,out] long *NumOfMatchsFound);
+		[id(107), helpstring("Start or stop a windows hook. Notifications are send via WHookxxx events.")] HRESULT SetupWindowsHook([in] WINDOWSHOOK_TYPES lHookType,[in] long hwndTargetWnd, [in] VARIANT_BOOL bStart, [in,out] long *lUWMHookMsgID);
+		[id(108), helpstring("Returns nCode for CBT, MSGFILTER, and SYSMSGFILTER hook procs.")] HRESULT HookProcNCode([in] WINDOWSHOOK_TYPES lHookType, [in,out] long *nCode);
+		[id(109), helpstring("Custom autocomplete using IAutoComplete. varStringArray must be a BSTR array. If IsTargetComboBox = True, attempts to find the Edit ctl part.")] HRESULT SetupCustomAutoComplete([in] long hwndTarget,[in] VARIANT_BOOL IsTargetComboBox , [in] long lCustomAutoCompleteFlags, [in] VARIANT * varStringArray);
+		[id(110), helpstring("Adds a string to a previously activated custom autocomplete. Does not check for duplicates.")] HRESULT CustomAutoCompleteAddString([in] long hwndTarget,[in] VARIANT_BOOL IsTargetComboBox , [in] BSTR strItem);
+		[id(111), helpstring("Enables or diables a previously activated custom autocomplete.")] HRESULT CustomAutoCompleteEnable([in] long hwndTarget,[in] VARIANT_BOOL IsTargetComboBox , [in] VARIANT_BOOL bEnable);
+		[id(112), helpstring("Please refer to IE_REGISTRY_OPTIONS_FLAGS enum for supported options. Value and type of varBuffer depends on the requested option. varBuffer must be initialized.")] HRESULT QueryIERegistryOption([in] long IeRegistryOptionsFlag,[in] VARIANT * varBuffer);
+		[id(113), helpstring("Please refer to IE_REGISTRY_OPTIONS_FLAGS enum for supported options. Value and type of varBuffer depends on the requested option.")] HRESULT SetIERegistryOption([in] long IeRegistryOptionsFlag,[in] VARIANT * varBuffer);
+		[id(114), helpstring("Attempts to decode a given string. %25 -> %")] HRESULT DecodeMime([in] BSTR strToDecode, [in, out] BSTR *strDecoded);
+		[id(115), helpstring("Attempts to delete IE cache or history, or cookies.")] HRESULT DeleteIEFiles([in] DELETE_IE_FILES_FLAGS enumWhichFiles);
+	};
+	
+//	[
+//		object, dual,
+//		uuid(15597B4E-B016-4A2F-9781-1C7B36091702),
+//		helpstring("IvbWBUI Interface"),
+//		pointer_default(unique)
+//	]
+//	interface IvbWBUI : IDispatch
+//	{
+		// Example method that will be called by the HTML
+		//HRESULT OnClick([in]IDispatch* pdispBody, [in]VARIANT varColor);
+//		[propget,id(-5512), // ## -5512 is DISPID_AMBIENT_DLCONTROL 
+//		helpstring("property AmbientDLControl")]
+//		HRESULT AmbientDLControl([out, retval] long *pVal);
+//	};
+
+[
+	uuid(33658027-1004-4E1E-8D35-C9146DF87919),
+	version(1.0),
+	helpstring("vbMHWB 1.0 Type Library")
+]
+library VBMHWBLib
+{
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+	typedef enum NEW_WINDOW3_FLAGS
+	{
+		NWMF_UNLOADING        = 0x0001,  // The query is occuring during onBeforeUnload or onUnload
+		NWMF_USERINITED       = 0x0002,  // The query is occuring in the context of what trident considers to be a user initiated action
+		NWMF_FIRST            = 0x0004,  // This is the first query since the begining of the last user initiated action
+		NWMF_OVERRIDEKEY      = 0x0008,  // The override key was pressed at the time the query was made
+		NWMF_SHOWHELP         = 0x0010,  // New window is an HTML help window
+		NWMF_HTMLDIALOG       = 0x0020,  // New window is an HTML dialog
+		NWMF_FROMDIALOGCHILD  = 0x0040,  // Called from an HTML dialog - do not show UI in parent window
+		NWMF_USERREQUESTED    = 0x0080,  // There is no doubt the user requested this window (from RClick->Open in New Window, or Shift+Clicked a link)
+		NWMF_USERALLOWED      = 0x0100,  // This popup is the result of the user requesting a replay that resulted in a refresh
+	} NEW_WINDOW3_FLAGS;
+
+	typedef enum WB_DOC_HOST_UI_DBL_CLK
+	{
+		WBDOCHOSTUIDBLCLK_DEFAULT			= 0,
+		WBDOCHOSTUIDBLCLK_SHOWPROPERTIES 	= 1,  //Html page property
+		WBDOCHOSTUIDBLCLK_SHOWCODE 			= 2  //Html page source
+	}WB_DOC_HOST_UI_DBL_CLK;
+
+	typedef enum WB_DOC_HOST_UI_FLAGS
+	{
+		//Include this flag to disallow text selection
+		WBDOCHOSTUIFLAG_DIALOG							= 0x1,
+		WBDOCHOSTUIFLAG_DISABLE_HELP_MENU				= 0x2,
+		WBDOCHOSTUIFLAG_NO3DBORDER						= 0x4,
+		WBDOCHOSTUIFLAG_SCROLL_NO						= 0x8,
+		WBDOCHOSTUIFLAG_DISABLE_SCRIPT_INACTIVE			= 0x10,
+		WBDOCHOSTUIFLAG_OPENNEWWIN						= 0x20,
+		WBDOCHOSTUIFLAG_DISABLE_OFFSCREEN				= 0x40,
+		WBDOCHOSTUIFLAG_FLAT_SCROLLBAR					= 0x80,
+		WBDOCHOSTUIFLAG_DIV_BLOCKDEFAULT				= 0x100,
+		WBDOCHOSTUIFLAG_ACTIVATE_CLIENTHIT_ONLY			= 0x200,
+		WBDOCHOSTUIFLAG_OVERRIDEBEHAVIORFACTORY			= 0x400,
+		WBDOCHOSTUIFLAG_CODEPAGELINKEDFONTS				= 0x800,
+		WBDOCHOSTUIFLAG_URL_ENCODING_DISABLE_UTF8		= 0x1000,
+		WBDOCHOSTUIFLAG_URL_ENCODING_ENABLE_UTF8		= 0x2000,
+		WBDOCHOSTUIFLAG_ENABLE_FORMS_AUTOCOMPLETE		= 0x4000,
+		WBDOCHOSTUIFLAG_ENABLE_INPLACE_NAVIGATION		= 0x10000,
+		WBDOCHOSTUIFLAG_IME_ENABLE_RECONVERSION			= 0x20000,
+		WBDOCHOSTUIFLAG_THEME							= 0x40000,
+		WBDOCHOSTUIFLAG_NOTHEME							= 0x80000,
+		WBDOCHOSTUIFLAG_NOPICS							= 0x100000,
+		WBDOCHOSTUIFLAG_NO3DOUTERBORDER					= 0x200000,
+		WBDOCHOSTUIFLAG_DISABLE_EDIT_NS_FIXUP			= 0x400000,
+		WBDOCHOSTUIFLAG_LOCAL_MACHINE_ACCESS_CHECK		= 0x800000,
+		WBDOCHOSTUIFLAG_DISABLE_UNTRUSTEDPROTOCOL		= 0x1000000
+	}WB_DOC_HOST_UI_FLAGS;
+
+	typedef enum WB_DOC_DOWNLOAD_CONTROL_FLAGS
+	{
+		WBDOCDOWNLOADCTLFLAG_DLIMAGES                          = 0x00000010,
+		WBDOCDOWNLOADCTLFLAG_VIDEOS                            = 0x00000020,
+		WBDOCDOWNLOADCTLFLAG_BGSOUNDS                          = 0x00000040,
+		WBDOCDOWNLOADCTLFLAG_NO_SCRIPTS                        = 0x00000080,
+		WBDOCDOWNLOADCTLFLAG_NO_JAVA                           = 0x00000100,
+		WBDOCDOWNLOADCTLFLAG_NO_RUNACTIVEXCTLS                 = 0x00000200,
+		WBDOCDOWNLOADCTLFLAG_NO_DLACTIVEXCTLS                  = 0x00000400,
+		WBDOCDOWNLOADCTLFLAG_DOWNLOADONLY                      = 0x00000800,
+		WBDOCDOWNLOADCTLFLAG_NO_FRAMEDOWNLOAD                  = 0x00001000,
+		WBDOCDOWNLOADCTLFLAG_RESYNCHRONIZE                     = 0x00002000,
+		WBDOCDOWNLOADCTLFLAG_PRAGMA_NO_CACHE                   = 0x00004000,
+		WBDOCDOWNLOADCTLFLAG_NO_BEHAVIORS                      = 0x00008000,
+		WBDOCDOWNLOADCTLFLAG_NO_METACHARSET                    = 0x00010000,
+		WBDOCDOWNLOADCTLFLAG_URL_ENCODING_DISABLE_UTF8         = 0x00020000,
+		WBDOCDOWNLOADCTLFLAG_URL_ENCODING_ENABLE_UTF8          = 0x00040000,
+		WBDOCDOWNLOADCTLFLAG_NOFRAMES                          = 0x00080000,
+		WBDOCDOWNLOADCTLFLAG_FORCEOFFLINE                      = 0x10000000,
+		WBDOCDOWNLOADCTLFLAG_NO_CLIENTPULL                     = 0x20000000,
+		WBDOCDOWNLOADCTLFLAG_SILENT                            = 0x40000000,
+		WBDOCDOWNLOADCTLFLAG_OFFLINEIFNOTCONNECTED             = 0x80000000,
+		WBDOCDOWNLOADCTLFLAG_OFFLINE                           = 0x80000000 //DLCTL_OFFLINEIFNOTCONNECTED
+	}WB_DOC_DOWNLOAD_CONTROL_FLAGS;
+
+	typedef enum WB_CONTEXT_MENU_TYPE
+	{
+		WBCONTEXTMENUTYPE_DEFAULT        = 0,
+		WBCONTEXTMENUTYPE_IMAGE          = 1,
+		WBCONTEXTMENUTYPE_CONTROL        = 2,
+		WBCONTEXTMENUTYPE_TABLE          = 3,
+		// in browse mode
+		WBCONTEXTMENUTYPE_TEXTSELECT     = 4,
+		WBCONTEXTMENUTYPE_ANCHOR         = 5,
+		WBCONTEXTMENUTYPE_UNKNOWN        = 6,
+		//;begin_internal
+		// These 2 are mapped to IMAGE for the public
+		WBCONTEXTMENUTYPE_IMGDYNSRC      = 7,
+		WBCONTEXTMENUTYPE_IMGART         = 8,
+		WBCONTEXTMENUTYPE_DEBUG          = 9,
+		WBCONTEXTMENUTYPE_VSCROLL        = 10,
+		WBCONTEXTMENUTYPE_HSCROLL        = 11
+	}WB_CONTEXT_MENU_TYPE;
+
+	typedef enum WB_CONTEXT_MENU_ACTION
+	{
+		WBCONTEXTMENUACTION_DISPLAY_NONE				= 0, //DEFAULT
+		WBCONTEXTMENUACTION_DISPLAY_IE_DEFAULT			= 1,
+		WBCONTEXTMENUACTION_RAISE_ONCONTEXTMENU_EVENT	= 2
+	}WB_CONTEXT_MENU_ACTION;
+
+	typedef enum WB_DROP_FORMATS
+	{
+		WB_CFHTML			= 0,
+		WB_CFTEXT			= 1,
+		WB_CFSINGLEFILE		= 2,
+		WB_CFRTF			= 3,
+		WB_CFERROR			= 4
+	}WB_DROP_FORMATS;
+
+//-------------------------------------------------------------------------
+//
+//  SHAutoComplete flags
+//
+//-------------------------------------------------------------------------
+	typedef enum AUTOCOMPLETE_FLAGS
+	{
+		// SHAutoComplete
+		//      hwndEdit - HWND of editbox, ComboBox or ComboBoxEx.
+		//      dwFlags - Flags to indicate what to AutoAppend or AutoSuggest for the editbox.
+		//
+		// WARNING:
+		//    Caller needs to have called CoInitialize() or OleInitialize()
+		//    and cannot call CoUninit/OleUninit until after
+		//    WM_DESTROY on hwndEdit.
+		//
+		//  dwFlags values:
+		SHELLACF_DEFAULT                   = 0x00000000,  // Currently (SHACF_FILESYSTEM | SHACF_URLALL)
+		SHELLACF_FILESYSTEM                = 0x00000001,  // This includes the File System as well as the rest of the shell (Desktop\My Computer\Control Panel\)
+		SHELLACF_URLHISTORY                = 0x00000002,  // URLs in the User's History
+		SHELLACF_URLMRU                    = 0x00000004,  // URLs in the User's Recently Used list.
+		SHELLACF_URLALL                    = (SHELLACF_URLHISTORY | SHELLACF_URLMRU),
+		SHELLACF_USETAB                    = 0x00000008,  // Use the tab to move thru the autocomplete possibilities instead of to the next dialog/window control.
+		SHELLACF_FILESYS_ONLY              = 0x00000010,  // This includes the File System
+
+		//#if (_WIN32_IE >= 0x0600)
+		SHELLACF_FILESYS_DIRS              = 0x00000020,  // Same as SHACF_FILESYS_ONLY except it only includes directories, UNC servers, and UNC server shares.
+		//#endif // (_WIN32_IE >= 0x0600)
+
+		SHELLACF_AUTOSUGGEST_FORCE_ON      = 0x10000000,  // Ignore the registry default and force the feature on.
+		SHELLACF_AUTOSUGGEST_FORCE_OFF     = 0x20000000,  // Ignore the registry default and force the feature off.
+		SHELLACF_AUTOAPPEND_FORCE_ON       = 0x40000000,  // Ignore the registry default and force the feature on. (Also know as AutoComplete)
+		SHELLACF_AUTOAPPEND_FORCE_OFF      = 0x80000000  // Ignore the registry default and force the feature off. (Also know as AutoComplete)
+	} AUTOCOMPLETE_FLAGS;
+
+	typedef enum CUSTOM_AUTOCOMPLETE_FLAGS
+	{
+        CACO_NONE           = 0x00,      // No AutoComplete
+        CACO_AUTOSUGGEST    = 0x01,      // enable autosuggest dropdown
+        CACO_AUTOAPPEND     = 0x02,      // enable autoappend
+        CACO_SEARCH         = 0x04,      // add search entry to completion list
+        CACO_FILTERPREFIXES = 0x08,      // don't match common prefixes (www., http://, etc)
+        CACO_USETAB         = 0x10,      // use tab to select autosuggest entries
+        CACO_UPDOWNKEYDROPSLIST = 0x20,  // up/down arrow key invokes autosuggest dropdown (if enabled)
+        CACO_RTLREADING     = 0x40      // enable RTL reading order for dropdown
+	}CUSTOM_AUTOCOMPLETE_FLAGS;
+
+	typedef enum IE_REGISTRY_OPTIONS_FLAGS
+	{
+		DISABLE_SCRIPT_DEBUGGER				= 0,
+		ERROR_DLG_DISPLAYED_ON_EVERY_ERROR	= 1,
+		PLAY_ANIMATIONS						= 2,
+		PLAY_BACKGROUND_SOUNDS				= 3,
+		DISPLAY_INLINE_VIDEOS				= 4,
+		DISPLAY_INLINE_IMAGES				= 5,
+		FORMSUGGEST_PW_ASK					= 6,
+		USE_FORMSUGGEST						= 7,
+		USE_SEARCH_ASST						= 8
+	}IE_REGISTRY_OPTIONS_FLAGS;
+
+	[
+		uuid(A8096483-2E53-45CF-A0E5-4E17CED6B7EF),
+		helpstring("_IvbWBEvents Interface")
+	]
+	dispinterface _IvbWBEvents
+	{
+		properties:
+		methods:
+        [id(1), helpstring("Statusbar text changed.")]
+        void StatusTextChange([in] short wbUID,[in] BSTR Text);
+
+        [id(2), helpstring("Fired when download progress is updated.")]
+        void ProgressChange([in] short wbUID,[in] long Progress, [in] long ProgressMax);
+
+        [id(3), helpstring("The enabled state of a command changed.")]
+        void CommandStateChange([in] short wbUID,[in] long Command, [in] VARIANT_BOOL Enable);
+
+        [id(4), helpstring("Download of a page started.")]
+        void DownloadBegin([in] short wbUID);
+
+        [id(5), helpstring("Download of page complete.")]
+        void DownloadComplete([in] short wbUID);
+
+        [id(6), helpstring("Document title changed.")]
+        void TitleChange([in] short wbUID,[in] BSTR Text);
+
+        [id(7), helpstring("Fired when the PutProperty method has been called.")]
+        void PropertyChange([in] short wbUID,[in] BSTR szProperty);
+
+        [id(8), helpstring("Fired before navigate occurs in the given WebBrowser (window or frameset element). The processing of this navigation may be modified.")]
+        void BeforeNavigate2([in] short wbUID, [in] VARIANT * URL, [in] IDispatch* pDisp,
+                             [in] VARIANT * Flags, [in] VARIANT * TargetFrameName,
+							 [in] VARIANT * PostData, [in] VARIANT * Headers,
+                             [in,out] VARIANT_BOOL * Cancel);
+
+        [id(9), helpstring("A new, hidden, non-navigated WebBrowser window is needed.")]
+        void NewWindow2([in] short wbUID, [in, out] IDispatch** ppDisp, [in, out] VARIANT_BOOL * Cancel);
+
+        [id(10), helpstring("Fired when the document being navigated to becomes visible and enters the navigation stack.")]
+        void NavigateComplete2([in] short wbUID, [in] VARIANT *URL, [in] IDispatch* pDisp );
+
+        [id(11), helpstring("Fired when the document being navigated reaches ReadyState_Complete.")]
+        void DocumentComplete([in] short wbUID, [in] VARIANT *URL, [in] IDispatch* pDisp,[in] VARIANT_BOOL isTopLevel );
+		
+		[id(12), helpstring("Fires when an error occurs during navigation. Cancel default value is true.")]
+		void NavigateError([in] short wbUID, [in] IDispatch *pDisp,[in] VARIANT *URL,[in] VARIANT *TargetFrameName,[in] VARIANT *StatusCode,[in,out] VARIANT_BOOL *Cancel);
+
+        [id(13), helpstring("Client to host method.")]
+        void ClientToHostWindow([in] short wbUID, [in,out] long * CX,[in,out] long * CY);
+
+        [id(14), helpstring("Fires to indicate that a file download is about to occur. Cancel default value is false.")]
+        void FileDownload([in] short wbUID, [out] VARIANT_BOOL * ActiveDocument,[in,out] VARIANT_BOOL * Cancel);
+
+        [id(15), helpstring("Fires when there is a change in encryption level.")]
+        void SetSecureLockIcon([in] short wbUID, [in] long SecureLockIcon);
+
+        [id(16), helpstring("This event is fired when a window is closed from script, using the window.close method. Cancel default value is true.")]
+        void WindowClosing([in] short wbUID, [in] VARIANT_BOOL IsChildWindow, [in,out] VARIANT_BOOL *Cancel);
+
+        [id(17), helpstring("Fires when the object changes its height.")]
+        void WindowSetHeight([in] short wbUID, [in] long Height);
+
+        [id(18), helpstring("Fires when the object changes its left position.")]
+        void WindowSetLeft([in] short wbUID, [in] long Left);
+
+        [id(19), helpstring("Fires to indicate whether the host window should allow or disallow resizing of the object.")]
+        void WindowSetResizable([in] short wbUID, [in] VARIANT_BOOL Resizable);
+
+        [id(20), helpstring("Fires when the object changes its top position.")]
+        void WindowSetTop([in] short wbUID, [in] long Top);
+
+        [id(21), helpstring("Fires when the object changes its width.")]
+        void WindowSetWidth([in] short wbUID, [in] long Width);
+//Replaced by DocHostShowMessage
+//        [id(22), helpstring("Fires before an HTML message is about to be displayed. Can change the msg or stop displaying msg.")]
+//        void ShowMessage([in] short wbUID,[in,out] BSTR *sMsg,[in,out] VARIANT_BOOL *ShowMsg);
+		
+		[id(26), helpstring("Fires before contextmenu is displayed. ctxDisplay default value is false")]
+		void OnContextMenu([in] short wbUID,[in] long ContextMenuType, [in] long X, [in] long Y, [in] IDispatch* ObjElem, [in,out] VARIANT_BOOL *ctxDisplay);
+//Replaced by OnWBKeyDown and OnWBKeyUp
+//		[id(27), helpstring("Fires when an acceletor key is pressed. EnableAllAccelerators must be set to true. Default value of Cancel = false - allow acceletor")]
+//		void OnAcceletorKeys([in] short wbUID,[in] short nKeyCode, [in] short nVirtExtKey, [in,out] VARIANT_BOOL *Cancel);
+
+		[id(28), helpstring("Fired when an event occurs that impacts privacy or when a user navigates away from a URL that has impacted privacy.")]
+		void PrivacyImpactedStateChange([in] short wbUID,[in] VARIANT_BOOL PrivacyImpacted);
+
+        [id(30), helpstring("Fired before a download begins. Provides information to download the file bypassing URLMON. bStopDownload, default = true.SendProgressEvents, default = true. sPathToSave = path and filename, FileDlUID = use to cancel a dl")]
+        void FileDownloadEx([in] short wbUID,[in] short FileDlUID, [in] BSTR sURL,[in] BSTR sFilename,[in] BSTR sExt, [in] BSTR sExtraHeaders,[in] BSTR sRedirURL,[in, out] VARIANT_BOOL *SendProgressEvents, [in,out] VARIANT_BOOL *bStopDownload, [in,out] BSTR *sPathToSave);
+
+        [id(32), helpstring("On progress")]
+        void OnFileDLProgress([in] short FileDlUID, [in] BSTR sURL,[in] long lProgress, [in] long lProgressMax, [in,out] VARIANT_BOOL *CancelDl);
+
+        [id(34), helpstring("On End download")]
+        void OnFileDLEndDownload([in] short FileDlUID, [in] BSTR sURL);
+
+        [id(35), helpstring("On Download Errors")]
+        void OnFileDLDownloadError([in] short FileDlUID, [in] BSTR sURL, [in] BSTR sErrorMsg);
+
+        [id(37), helpstring("After receiving the first initial response from server")]
+        void OnFileDLResponse([in] short FileDlUID, [in] BSTR sURL,[in] long lResponseCode,[in] BSTR sResponseHeaders, [in,out] VARIANT_BOOL *CancelDl);
+
+        [id(38), helpstring("Signals a download has been cancelled.")]
+        void OnFileDLCancelDownload([in] short FileDlUID, [in] BSTR sURL, [in] VARIANT_BOOL CancelledDuringDL);
+
+        [id(39), helpstring("Before sending request headers to server. Gives client a chance to add additional headers.")]
+        void OnFileDLBeginningTransaction([in] short FileDlUID, [in] BSTR sURL, [in] BSTR sRequestHeaders, [in,out] BSTR *sAdditionalRequestHeaders, [in,out] VARIANT_BOOL *bResuming, [in,out] VARIANT_BOOL *bCancel);
+
+        [id(41), helpstring("Fires before a basic or LM authentication. Supply username and password obtained from user or cancel.")]
+        void OnAuthentication([in] short wbUID, [in,out] BSTR *sUsername,[in,out] BSTR *sPassword, [in,out] VARIANT_BOOL *Cancel);
+
+        [id(42), helpstring("Fires due to an ERROR_INTERNET_xxx or ERROR_HTTP_xxx. If Cancel is false, will attempt to continue DL.")]
+        void OnHTTPSecurityProblem([in] short wbUID, [in] long lProblem,[in,out] VARIANT_BOOL *Cancel);
+
+        [id(43), helpstring("Potocol Handler, fired before sending request to server and BeforeNavigate2.")]
+        void ProtocolHandlerOnBeginTransaction([in] short wbUID, [in] BSTR sURL, [in] BSTR sRequestHeaders, [in,out] BSTR *sAdditionalHeaders, [in,out] VARIANT_BOOL *Cancel);
+
+        [id(44), helpstring("Potocol Handler, fired after a response have been received from server.")]
+        void ProtocolHandlerOnResponse([in] short wbUID, [in] BSTR sURL, [in] BSTR sResponseHeaders, [in] BSTR sRedirectedUrl, [in] BSTR sRedirectHeaders, [in,out] VARIANT_BOOL *Cancel);
+
+        [id(45), helpstring("A new, hidden, non-navigated WebBrowser window is needed. XP sp2 only. Fires before NewWindow2. lFlags = NEW_WINDOW3_FLAGS enum.")]
+        void NewWindow3([in] short wbUID, [in, out] IDispatch** ppDisp, [in, out] VARIANT_BOOL * Cancel, [in] long lFlags, [in] BSTR sURLContext, [in] BSTR sURL);
+
+        [id(46), helpstring("Points the WebBrowser Control to a registry key located at HKEY_CURRENT_USER/Software/YourCompany/YourApp for registry overrides.")]
+        void OnGetOptionKeyPath([in] short wbUID, [in,out] BSTR *sRegistryOptionKeyPath);
+
+        [id(47), helpstring("Points the WebBrowser Control to a registry key located at HKEY_CURRENT_USER/Software/YourCompany/YourApp for user preference overrides.")]
+        void OnGetOverrideKeyPath([in] short wbUID, [in,out] BSTR *sRegistryOverrideKeyPath);
+
+		[id(48), helpstring("keystate, combination of MK_CONTROL, MK_SHIFT, MK_ALT, MK_BUTTON, MK_LBUTTON, MK_MBUTTON, and MK_RBUTTON. ptX and ptY are in screen coordinates")]
+		void OnWBDragEnter([in] short wbUID, [in] short KeyState, [in] long ptX, [in] long ptY, [in,out] long *lEffect);
+		
+		[id(49), helpstring("DragOver-")]
+		void OnWBDragOver([in] short wbUID, [in] short KeyState, [in] long ptX, [in] long ptY, [in,out] long *lEffect);
+
+		[id(50), helpstring("Drop- lpData will contain dropped filename or data. WBDropFormat, one of WB_DROP_FORMATS enum.")]
+		void OnWBDrop([in] short wbUID, [in] short KeyState, [in] long ptX, [in] long ptY, [in] BSTR lpData, [in] long lWBDropFormat, [in,out] long *lEffect);
+		
+		[id(51), helpstring("DragLeave-Cancelled")]
+		void OnWBDragLeave([in] short wbUID);
+
+		[id(52), helpstring("One of WMxxxx messages. Defaults, Handled = False, lReturn = 0")]
+		void OnWMMessage([in] long hWnd,[in] long uMsg, [in] long wParam,[in] long lParam, [in,out] long *lReturn, [in,out] VARIANT_BOOL *Handled);
+		
+		[id(53)] 
+		void OnPostDataAvailable ([in] short PostUID, [in] BSTR sURL, [in] BSTR pData, [in,out] VARIANT_BOOL *CancelPost);
+
+		[id(54), helpstring("Drop2- vData will contain a string array VT_ARRAY|VT_BSTR of dropped file names.")]
+		void OnWBDrop2([in] short wbUID, [in] short KeyState, [in] long ptX, [in] long ptY, [in] VARIANT * vData, [in,out] long *lEffect);
+
+		[id(55)] 
+		void OnPostOnProgress ([in] short PostUID, [in] BSTR sURL,[in] long lProgress, [in] long lProgressMax, [in] long lStatusCode, [in] BSTR sStatusText, [in,out] VARIANT_BOOL *CancelPost);
+	
+		[id(56)]
+		void OnPostError([in] short PostUID, [in] BSTR sURL,[in] BSTR sErrorMsg);
+	
+		[id(57)]
+		void OnPostEnd([in] short PostUID, [in] BSTR sURL);
+	
+		[id(58)]
+		void OnPostResponse([in] short PostUID, [in] BSTR sURL, [in] long lResponseCode,[in] BSTR sResponseHeaders);
+
+        [id(59), helpstring("Set SourceOnDocComplete property to true, to have this event fire instead of DocumentComplete")]
+        void DocumentCompleteWBEx([in] short wbUID, [in] VARIANT *URL, [in] IDispatch* pDisp, [in] VARIANT_BOOL isTopLevel, [in] BSTR sDocSource);
+
+        [id(60), helpstring("Set URL_POLICY for a specific URL and action. Set lpUrlPolicy to -1 to use MSHTML defaults. PUAF_Flag, one of PUAF enum.")]
+        void WBProcessUrlAction([in] short wbUID, [in] BSTR sURL,[in] long lUrlAction, [in] long PUAF_Flag, [in,out] long *lpUrlPolicy, [in,out] VARIANT_BOOL *bHandled);
+
+		[id(61), helpstring("WinXp sp2 Popup management.")]
+		void WBEvaluateNewWindow([in] short wbUID, [in] BSTR sURL, [in] BSTR sName, [in] BSTR sUrlContext, [in] BSTR sFeatures, [in] VARIANT_BOOL bReplace, [in] long lFlags, [in] long lUserActionTime, [in,out] long *lPopUpAction);
+		
+		[id(62), helpstring("Fires before an HTML message is about to be displayed. To display own messagebox, set ShowMsgInternaly to false and set lReturnValue to the return value.")]
+		void DocHostShowMessage([in] short wbUID, [in] long lHwnd, [in] BSTR strText, [in] BSTR strCaption, [in] long lType, [in] BSTR strHelpFile, [in] long lHelpContext, [in,out] long *lReturnValue, [in,out] VARIANT_BOOL *ShowMsgInternaly);
+
+		[id(63), helpstring("Receive callback after calling FindAnyTextMatch. pTxtRangeElemDisp is the IDispatch of IHTMLTxtRange element used to find given text.")]
+		void FindAnyTextMatchCallback([in] short wbUID,[in] IDispatch* pHtmlDoc2Disp, [in] IDispatch* pTxtRangeElemDisp, [in,out] VARIANT_BOOL *bStopSearch);
+
+		[id(64), helpstring("Fires when there is a script error. Default value of bStopRunningScript is True.")]
+		void OnShowScriptError([in] short wbUID, [in] VARIANT* vErrorLine, [in] VARIANT* vErrorCharacter, [in] VARIANT* vErrorCode, [in] VARIANT* vErrorMsg, [in] VARIANT* vErrorURL, [in,out] VARIANT_BOOL *bStopRunningScript);
+
+		[id(65), helpstring("IHTMLOMWindowServices interface implementation. Minimum requirements XP sp2")]
+		void OnHTMLOMWindowServicesMoveTo([in] short wbUID, [in] long x, [in] long y);
+
+		[id(66), helpstring("IHTMLOMWindowServices interface implementation. Minimum requirements XP sp2")]
+		void OnHTMLOMWindowServicesMoveBy([in] short wbUID, [in]  long x, [in] long y);
+
+		[id(67), helpstring("IHTMLOMWindowServices interface implementation. Minimum requirements XP sp2")]
+		void OnHTMLOMWindowServicesResizeTo([in] short wbUID, [in] long x, [in] long y);
+
+		[id(68), helpstring("IHTMLOMWindowServices interface implementation. Minimum requirements XP sp2")]
+		void OnHTMLOMWindowServicesResizeBy([in] short wbUID, [in] long x, [in] long y);
+
+		[id(69), helpstring("bHandled default value is False. Set bHandled to True to consume the key.")]
+		void OnWBKeyDown([in] short wbUID,[in] short nKeyCode, [in] short nVirtExtKey, [in,out] VARIANT_BOOL *bHandled);
+
+		[id(70), helpstring("bHandled default value is False. Set bHandled to True to consume the key.")]
+		void OnWBKeyUp([in] short wbUID,[in] short nKeyCode, [in] short nVirtExtKey, [in,out] VARIANT_BOOL *bHandled);
+
+//		[id(60)]
+//		void OnUploadDataAvailable ([in] short UploadUID, [in] BSTR sURL, [in] BSTR pData, [in,out] VARIANT_BOOL *CancelPost);
+
+//		[id(61)] 
+//		void OnUploadOnProgress ([in] short UploadUID, [in] BSTR sURL,[in] long lProgress, [in] long lProgressMax, [in] long lStatusCode, [in] BSTR sStatusText, [in,out] VARIANT_BOOL *CancelUpload);
+	
+//		[id(62)]
+//		void OnUploadError([in] short UploadUID, [in] BSTR sURL,[in] BSTR sErrorMsg);
+	
+//		[id(63)]
+//		void OnUploadEnd([in] short UploadUID, [in] BSTR sURL);
+	
+//		[id(64)]
+//		void OnUploadResponse([in] short UploadUID, [in] BSTR sURL, [in] long lResponseCode,[in] BSTR sResponseHeaders);
+
+//		[id(65)]
+//		void OnUpload([in] short UploadUID, [in] BSTR sURL,[in] long lRequested, [in] long lTotal, [in,out] VARIANT_BOOL *CancelUpload);
+
+	};
+
+	[
+		uuid(20247C83-3429-47B1-817F-C99F29D2BF3A),
+		helpstring("vbWB Class")
+	]
+	coclass vbWB
+	{
+		[default] interface IvbWB;
+		[default, source] dispinterface _IvbWBEvents;
+//		interface IvbWBUI;
+	};
+
+
+};

@@ -1,0 +1,1253 @@
+<html>
+
+<head>
+<title>vbMHWB v1.2.1.6, ATL ActiveX control for hosting and advanced customization of Multiple WebBrowser controls with protocol handlers</title>
+<Style>
+BODY, P, TD { font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 10pt }
+h2, h3, h4, h5 { color: #ff9900; font-weight: bold; }
+H2 { font-size: 13pt; }
+H3 { font-size: 12pt; }
+H4 { font-size: 10pt; color: black; }
+PRE { BACKGROUND-COLOR: #FBEDBB; FONT-FAMILY: "Courier New", Courier, mono; WHITE-SPACE: pre; }
+CODE { COLOR: #990000; FONT-FAMILY: "Courier New", Courier, mono; }
+</style>
+</head>
+
+<body bgcolor="#FFFFFF" color=#000000>
+<!----------------------------- Article Starts ----------------------------->
+
+<h2>vbMHWB ActiveX Control - v1.2.1.6</h2>
+<p><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=137627&amp;type=2" width="125" height="37" border="0" alt="SourceForge.net Logo" /></a></p>
+<p><a name="Index"></a></p>
+
+
+<p><a href="#Introduction">Introduction</a>
+<br><a href="#Background">Background</a>
+<br>Implementation challenges:
+<br>&nbsp;&nbsp;&nbsp; <a href="#Events">Events</a>
+<br>&nbsp;&nbsp;&nbsp; <a href="#_ATL_MIN_CRT">_ATL_MIN_CRT</a>
+<br>&nbsp;&nbsp; <a href="#protocol Handling">Asynchronous Pluggable Protocols</a>
+<br>&nbsp;&nbsp; <a href="#RegisterBindStatusCallback">RegisterBindStatusCallback and Content-Disposition header</a>
+<br><a href="#Brief Explanation of Classes">Brief Overview of Classes</a>
+<br><a href="#Setting up the control">Setting up the control</a>
+<br><a href="#About Demo Applications">About Demo Applications</a>
+<br>Control:
+<br>&nbsp;&nbsp; <a href="#Properties">Properties</a>
+<br>&nbsp;&nbsp; <a href="#CtlEvents">Events</a>
+<br>&nbsp;&nbsp; <a href="#Methods">Methods</a>
+<br><a href="#Related Document">Related Documents</a>
+<br><a href="#History">History</a>
+<br><a href="#Downloads">Downloads</a>
+<br><a href="#csharp">C# Version!</a>
+<br><a href="#Contact">Contact</a></P>
+
+<H2><a name="Introduction">Introduction</a></H2>
+
+<P>The goal of this project is to replace web browser wrapper control with one that 
+allows developers to create and use a web browser control having total control 
+over GUI, context menus, accelerator keys, downloads, security, ... without 
+using any sub classing, registry or hacks. The result is an ATL control:</P>
+<UL>
+<LI>Which is as easy to use as any Web browser wrapper control. Register <I>vbMHWB.dll</I> and use it as any other ActiveX control. 
+<LI>Allows viewing of all request headers (html, images, css, ...) with the option of adding additional headers (HTTP+HTTPS)
+<LI>Allows viewing of all response headers (HTTP+HTTPS)
+<LI>Allows GUI customization using <CODE>DOC_HOST_UI_FLAGS</CODE> per Webbrowser Control instance or globally. NO3DBORDER, ... 
+<LI>Allows behavior customization using <CODE>DOC_DOWNLOAD_CONTROL_FLAGS</CODE> per Webbrowser Control instance or globally. <CODE>DLIMAGES</CODE>, <CODE>DLVIDEOS</CODE>, ... 
+<LI>Disallows context menus or raises <code>OnContextMenu</code> event for each context menu activated.
+<LI>Allows interception and cancellation of keyboard input including accelerator
+  keys via <CODE>OnWBKeyDown</CODE> and <CODE>OnWBKeyUp</CODE> events
+<LI>That, by default, is configured to take over user downloads using <CODE>FileDownloadEx</CODE> and <CODE>OnFileDLxxxx</CODE> events. 
+<LI>That can be used as a simple download manager using <CODE>DownloadUrlAsync</CODE> method and <CODE>OnFileDLxxx</CODE> events. 
+<LI>Allows fine tuning of security per URL via <CODE>SecurityManagerProcessUrlAction</CODE> event.
+<LI>Allows interception and overriding of HTTP security problems via <code>WBProcessUrlAction</code> event.
+<LI>Allows interception and overriding of basic authentication requests via <code>OnAuthentication</code> event
+<LI>Allows replacing or augmenting registry settings via <CODE>OnGetOptionKeyPath</CODE> and <CODE>OnGetOverrideKeyPath</CODE> events. 
+<LI>Allows posting of data via <CODE>GET</CODE> or <CODE>POST</CODE> methods with notifications via <CODE>OnPostxxxx</CODE> events. 
+<LI>Allows handling of single or multiple drops via <CODE>OnWBDragxxx</CODE> and <CODE>OnWBDropx</CODE> events.
+<LI>That adds a host of new <a href="#Properties">properties</a>, <a href="#Methods"> methods</a> and
+  <a href="#Events">events</a>, in addition to almost
+  all Web browser wrapper control.
+</LI></UL>
+
+<P>Even though, this control was made to be used by VB, but due to the fact that
+it is a Fully compliant ActiveX control, it can also be used from <code>MFC</code>, 
+<code>.NET</code>, ...</P>
+
+<H2><a name="Background">Background</a></H2>
+<P>The control is written in VC++ 6.0 using ATL3.0. It is compiled with minimum dependencies (no
+<code>MFC</code>, <code>std::</code>, <code>CString</code>, ...). It is designed to host multiple
+WebBrowser controls within one ATL
+created window. This is contradictory to MSDN recommendation
+which suggests to use one ATL window per hosted control. The reason for choosing
+this approach was to remove burden of Webbrowser control management from the hosting client application
+to the control. Normally, a developer places an instance of a control on a form/dlg,
+then if needed, an array of the controls is created and maintained by client
+application. My approach enables the developer to insert one instance of this control on
+a form/dlg and then use <code>CvbWB::AddBrowser</code> and <code>CvbWB::RemoveBrowser</code> methods to
+add and remove Webbrowser controls. Each newly created control (through an
+instance of <code>IWB</code> class) is assigned a unique id (<CODE>wbUID)</CODE>.
+This unique id enables the client application to 
+communicate with that specific Webbrowser control instance via it's properties, methods, and
+to find out which Webbrowser control has fired an event.</P>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<H2>Implementation challenges</H2>
+<p>There are many articles that cover the basics of creating, hosting and sinking events of a Webbrowser
+control. 
+So rather than going through <code>CoCreateInstance</code>, <code>IOleObject::SetClientSite</code>, and so on. I
+decided to explain some of the main implementation challenges where you will find very little
+and often no information about them.</p>
+
+<p>Here is a list of main challenges encountered and resolved during development
+of this control. I neither claim that these solutions are unique nor the best. Just
+that they seem to work.</p>
+
+<h3><a name="Events">Events</a></h3>
+<p>1) The first issue that I encountered was lack of documentation on how to
+pass byref parameter or objects to a client application such as VB. Attempts to
+handle any of these wizard generated events was causing GPF. Here is a sample of the none working code for <code>NewWindow3</code> event
+taken from <code>CProxy_IvbWBEvents</code> class:</p>
+
+<pre>	VOID Fire_NewWindow3(SHORT wbUID, IDispatch * * ppDisp, VARIANT_BOOL * Cancel, LONG lFlags, BSTR sURLContext, BSTR sURL)
+	{
+		T* pT = static_cast<T*>(this);
+		int nConnectionIndex;
+		CComVariant* pvars = new CComVariant[6];
+		int nConnections = m_vec.GetSize();
+		
+		for (nConnectionIndex = 0; nConnectionIndex &lt; nConnections; nConnectionIndex++)
+		{
+			pT-&gt;Lock();
+			CComPtr<IUnknown> sp = m_vec.GetAt(nConnectionIndex);
+			pT-&gt;Unlock();
+
+			IDispatch* pDispatch = reinterpret_cast<IDispatch*>(sp.p);
+			if (pDispatch != NULL)
+			{
+				pvars[5] = wbUID;
+				
+				/////////////////////////////////////////////////////////////
+				//Next two params need to be passed by ref or they cause GPF
+				//
+				pvars[4] = ppDisp;
+				pvars[3] = Cancel;
+				/////////////////////////////////////////////////////////////
+				
+				pvars[2] = lFlags;
+				pvars[1] = sURLContext;
+				pvars[0] = sURL;
+				
+				DISPPARAMS disp = { pvars, NULL, 6, 0 };
+				pDispatch-&gt;Invoke(0x2d, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &amp;disp, NULL, NULL, NULL);
+			}
+		}
+	}
+</pre>
+
+<p>And here is the correction:</p>
+<pre>				pvars[4].vt = VT_BYREF|VT_DISPATCH;
+				pvars[4].byref = ppDisp;
+				
+				pvars[3].vt = VT_BOOL|VT_BYREF;
+				pvars[3].byref = Cancel;
+
+</pre>
+
+<p>2) The second issue that I encountered was again related to events. This issue showed up when I implemented the protocol handlers.
+Apparently, the 
+<code>IConnectionPointImpl</code> does not fire events across COM components. So, after some looking around, I came across KB article 280512, 
+<code>ATLCPImplMT</code> encapsulates ATL event firing across COM apartments. Using included class <code>IConnectionPointImplMT</code> 
+(From MS) solved this issue. And here is the completed code for <code>Newwindow3</code> event:</p>
+
+<pre>	VOID Fire_NewWindow3(SHORT wbUID, IDispatch * * ppDisp, VARIANT_BOOL * Cancel, LONG lFlags, BSTR sURLContext, BSTR sURL)
+	{
+		T* pT = static_cast<T*>(this);
+		int nConnectionIndex;
+		CComVariant* pvars = new CComVariant[6];
+		int nConnections = m_vec.GetSize();
+		
+		for (nConnectionIndex = 0; nConnectionIndex &lt; nConnections; nConnectionIndex++)
+		{
+			//////////////////////////////////////////////////////////////////////
+			//Next three lines need to be replaced
+			//pT-&gt;Lock();
+			//CComPtr<IUnknown> sp = m_vec.GetAt(nConnectionIndex);
+			//pT-&gt;Unlock();
+			/////////////////////
+			
+			//////////////////////////////////////////////////////////////////////
+			//Replaced the previous three lines of code with the next two lines
+			CComPtr<IUnknown> sp;
+			sp.Attach (GetInterfaceAt(nConnectionIndex));
+			/////////////////////
+
+			IDispatch* pDispatch = reinterpret_cast<IDispatch*>(sp.p);
+			if (pDispatch != NULL)
+			{
+				pvars[5] = wbUID;
+
+				pvars[4].vt = VT_BYREF|VT_DISPATCH;
+				pvars[4].byref = ppDisp;
+				
+				pvars[3].vt = VT_BOOL|VT_BYREF;
+				pvars[3].byref = Cancel;
+
+				pvars[2] = lFlags;
+				pvars[1] = sURLContext;
+				pvars[0] = sURL;
+				
+				DISPPARAMS disp = { pvars, NULL, 6, 0 };
+				pDispatch-&gt;Invoke(0x2d, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &amp;disp, NULL, NULL, NULL);
+			}
+		}
+	}
+</pre>
+
+<p>3) The third issue showed up after implementing protocol hanlder. I needed to fire events from the <code>WBPassthruSink</code> 
+(protocol handler sink) class for a specific Webbrowser control to notify the client
+application via <code>ProtocolHandlerOnBeginTransaction</code> 
+and <code>ProtocolHandlerOnResponse</code> events. Since the instances of the <code>WBPassthruSink</code> class are created
+by URLMon as needed by <code>PassthroughAPP</code>, 
+I had to find a way to determine which instance of the Webbrowser control is involved so I can fire events for that specific control.
+My solution was to find the Internet Explorer Server HWND in the implementation of <code>WBPassthruSink::OnStart</code> using <code>IWindowForBindingUI</code> interface 
+Obtained from our protocol handler.</p>
+
+<pre>	//Using IWindowForBindingUI interface
+	CComPtr<IWindowForBindingUI> objWindowForBindingUI;
+	//This is a macro for QueryService
+	HRESULT hret = QueryServiceFromClient(&amp;objWindowForBindingUI);
+	if( (SUCCEEDED(hret)) &amp;&amp; (objWindowForBindingUI) )
+	{
+		HWND hwndIEServer = NULL;
+		//Should return InternetExplorerServer HWND
+		objWindowForBindingUI-&gt;GetWindow(IID_IHttpSecurity, &amp;hwndIEServer);
+		//From here we can find the ATL window hosting this instance of our control
+		//and have it fire an event for the form/dlg hosting this instance of our control
+		if(hwndIEServer)
+</pre>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<h3><a name="_ATL_MIN_CRT">_ATL_MIN_CRT</a></h3>
+<p>One of the design goals of this control was to be build with minimum dependencies. Standard _ATL_MIN_CRT support does the job for eliminating the CRT overhead well.
+But unfortunately, it doesn't support the use of global C++ constructs, like the following:</p>
+
+<pre>class CTest {
+public:
+  CTest() { 
+    MessageBox(NULL, _T(&quot;Hello, I'm intitialized&quot;), 
+                     _T(&quot;Static object&quot;), MB_SETFOREGROUND | MB_OK);
+  }
+  ~CTest() { 
+    MessageBox(NULL, _T(&quot;Bye, I'm done&quot;), _T(&quot;Static object&quot;), 
+                     MB_SETFOREGROUND | MB_OK);
+  }
+};
+
+static CTest g_test;
+extern CTest *gp_Test;
+</pre>
+
+<p>The above would lead to linker conflicts, because CRT code for
+constructors/destructors invocation would be referenced.
+To overcome this, I am using <code>AuxCrt.cpp</code> custom _ATL_MIN_CRT implementation and a replacement for <code>AtlImpl.cpp</code> class. 
+This class is from Andrew Nosenko (<a href="mailto:andien@geocities.com">andien@geocities.com</a>).
+<a href="http://www.geocities.com/~andien/atlaux.htm">http://www.geocities.com/~andien/atlaux.htm</a>.
+With this class, I was able to use <code>CSimpleArray</code> as a global variable to keep track of instances of
+Webbrowser controls. <b>Note</b>, for convenience, I placed a copy of <code>AuxCrt.cpp</code> 
+in the ATL\Include\
+directory.</P>
+
+<pre>//Taken from StdAfx.h
+
+//gCtrlInstances keeps track of each instance of our control
+//This global is needed due to the fact that a client may place
+//this control on more than one form/dlg or have multiple instances of BW
+//hosting in one control. In this case, using one
+//global ptr to our control will cause the events to be routed to the
+//first control, not the one we want. The control instances (this) is
+//added to this array in Constructor and removed in Destructor of CvbWB class.
+
+extern CSimpleArray&lt;void*&gt; gCtrlInstances;
+
+//Flag to track registering and unregistering of HTTP/HTTPS protocols
+//Can only be done once per DLL load. Effects all instances of Webbrowser control.
+extern BOOL gb_IsHttpRegistered;
+extern BOOL gb_IsHttpsRegistered;
+//Protocol handling registration
+extern CComPtr<IClassFactory> m_spCFHTTP;
+extern CComPtr<IClassFactory> m_spCFHTTPS;
+....
+</pre>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<h3><a name="protocol Handling">Asynchronous Pluggable Protocols</a></h3>
+<p>One of the my main design goals was to be able to act as a pass through
+between Webbrowser control and URLMon so as to intercept all the requests and responses by using
+a asynchronous
+pluggable protocol. At the start, this task seemed pretty straightforward, implement <code>IInternetProtocol, IInternetProtocolInfo, IInternetPriority, IInternetProtocolSink, IInternetBindInfo, IClassFactory</code> 
+interfaces. In the implementation of the <code>IServiceProvider::QueryService</code>, create and pass an instance of my <code>IInternetProtocolImpl</code> to 
+<code>URLMon</code>. Overwrite necessary methods and handle the requests. Unfortunately, this approach had a
+big flaw, My <code>IInternetProtocol</code> implementation was only being called
+to handle the main document and not for the rest of the page requests, images, css,...</p>
+<p>After doing some searching, I came across an excellent package called <code>PassthroughAPP</code> by 
+<a href="mailto:itandetnik@mvps.org"> Igor Tandetnik</a>. In google groups under
+microsoft.public.inetsdk.programming.xxx, just search for <code>PassthroughAPP</code>. The
+package contains 5 files.</p>
+<table border="1" cellspacing="1" width="100%">
+  <tr>
+    <td width="34%" valign="top"><code>PassthroughObject.h</code> </td>
+    <td width="66%"> A simple COM object. <code>IPassthroughObject</code>
+    </td>
+  </tr>
+  <tr>
+    <td width="34%" valign="top"><code>ProtocolCF.h</code> </td>
+    <td width="66%">A customized COM class factory. Implements <code>CComClassFactory</code></td>
+  </tr>
+  <tr>
+    <td width="34%" valign="top"><code>ProtocolCF.inl</code> </td>
+    <td width="66%">Class factory implementation</td>
+  </tr>
+  <tr>
+    <td width="34%" valign="top"><code>ProtocolImpl.h</code> </td>
+    <td width="66%"><p>Protocol handlers header. Implemented interfaces,
+<br><code>IPassthroughObject</code>
+<br><code>IInternetProtocol</code>
+<br><code>IInternetProtocolInfo</code>
+<br><code>IInternetPriority</code>
+<br><code>IInternetThreadSwitch</code>
+<br><code>IWinInetHttpInfo</code>
+<br><code>IInternetProtocolSink</code>
+<br><code>IServiceProvider</code>
+<br><code>IInternetBindInfo</code></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="34%" valign="top"><code>ProtocolImpl.inl</code> </td>
+    <td width="66%">Protocol handlers implementation</td>
+  </tr>
+</table>
+
+<p> Except for
+the five methods that I have overridden in WBPassthruSink class to intercept all
+the requests and responds, I will not be able to answer any questions regarding <code>PassthroughAPP.</code>&nbsp;
+Please direct your 
+questions to the <a href="mailto:itandetnik@mvps.org">author</a> as my 
+understanding of package's design and implementation is limited.</p>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<h3> <a name="RegisterBindStatusCallback">RegisterBindStatusCallback and Content-Disposition header</a></h3>
+<p>One of the design goals of this control was to take full control over file
+downloads. This was pretty simple to implement at first and all seemed to work
+without a glitch. But as usual, a strange problem was reported. If a user
+attempted to download an attachment from Hotmail, Yahoo, ... the default
+download dialog was being displayed, bypassing my custom download manager. I
+traced the problem to <code>RegisterBindStatusCallback</code> method which is called in <code>IDownloadManager::Download</code>
+method, it was returning E_FAIL. This failure seems to occur when a server sends
+a Content-Disposition header in response to a file download request. Of course, MSDN
+does not even mention anything about an E_FAIL return or why
+RegisterBindStatusCallback may fail. After searching for a while to no
+avail, I decided to attempt to implement a work around.</p>
+
+<p>First step was to somehow force <code>RegisterBindStatusCallback</code> to succeed.</p>
+
+<ul>
+  <li>Call <code>RegisterBindStatusCallback</code>, passing an <code>IBindStatusCallback</code> pointer to
+    retrieve previous <code>IBindStatusCallback</code></li>
+  <li>If the return value is E_FAIL, then call <code>RevokeObjectParam</code> to
+    unregister the previous <code>IBindStatusCallback</code></li>
+  <li>If the return value from <code>RevokeObjectParam</code> indicate success, attempt to call <code>RegisterBindStatusCallback</code> 
+    for a second time which should succeed</li>
+</ul>
+
+<pre>	//Taken from WBDownLoadManager::Download
+	//filedl is an instance of my IBindStatusCallback implementation
+	//pbc is a BindCtx pointer passed to Download method
+	
+	IBindStatusCallback *pPrevBSCB = NULL;
+	hr = RegisterBindStatusCallback(pbc, 
+			reinterpret_cast<IBindStatusCallback*>(filedl), &amp;pPrevBSCB, 0L);
+
+	if( (FAILED(hr)) &amp;&amp; (pPrevBSCB) )
+	{
+		//RevokeObjectParam for current BSCB, so we can register our BSCB
+		//_BSCB_Holder_ is the key used to register a callback with a specific BindCtX
+		LPOLESTR oParam = L&quot;_BSCB_Holder_&quot;;
+		hr = pbc-&gt;RevokeObjectParam(oParam);
+		if(SUCCEEDED(hr))
+		{
+			//Attempt register again, should succeed now
+			hr = RegisterBindStatusCallback(pbc, 
+					reinterpret_cast<IBindStatusCallback*>(filedl), 0, 0L);
+			if(SUCCEEDED(hr))
+			{
+				//Need to pass a pointer for BindCtx and previous BSCB to our implementation
+				filedl-&gt;m_pPrevBSCB = pPrevBSCB;
+				filedl-&gt;AddRef();
+				pPrevBSCB-&gt;AddRef();
+				filedl-&gt;m_pBindCtx = pbc;
+				pbc-&gt;AddRef();
+			}
+	//....
+</pre>
+
+<p>Second step was to relay some calls to the previous <code>IBindStatusCallback</code> from our implementation. Otherwise no download 
+will take place. Memory leaks and crashes to be expected. This part was based on
+trial and error.</p>
+<ul>
+  <li>In <code>::OnStartBinding</code></li>
+</ul>
+<pre>	if(m_pPrevBSCB)
+	{
+		m_pPrevBSCB-&gt;OnStopBinding(HTTP_STATUS_OK, NULL);
+	}
+</pre>
+<ul>
+  <li>In <code>::OnProgress</code></li>
+</ul>
+<pre>	if(m_pPrevBSCB)
+	{
+		//Need to do this otherwise a filedownload dlg will be displayed
+		//as we are downloading the file.
+		if(ulStatusCode == BINDSTATUS_CONTENTDISPOSITIONATTACH)
+			return S_OK;
+		m_pPrevBSCB-&gt;OnProgress(ulProgress, ulProgressMax, ulStatusCode, szStatusText);
+	}
+</pre>
+
+<ul>
+  <li>In <code>::OnStopBinding</code></li>
+</ul>
+<pre>	if( (m_pPrevBSCB) &amp;&amp; (m_pBindCtx) )
+	{
+		//Register PrevBSCB and release our pointers
+		LPOLESTR oParam = L&quot;_BSCB_Holder_&quot;;
+		m_pBindCtx-&gt;RegisterObjectParam(oParam, 
+					reinterpret_cast<IUnknown*>(m_pPrevBSCB));
+		m_pPrevBSCB-&gt;Release();
+		m_pPrevBSCB = NULL;
+		m_pBindCtx-&gt;Release();
+		m_pBindCtx = NULL;
+		//Decrease our ref count, so when release is called
+		//we delete this object
+		--m_cRef;
+	}
+</pre>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<H2><a name="Brief Explanation of Classes">Brief Overview of Classes</a></H2>
+<p>Please ensure that you have the latest SDK that works with VC++ 6.0 , <a href="http://www.microsoft.com/msdownload/platformsdk/sdkupdate/psdk-full.htm">February 2003
+SDK</a>.
+</p>
+<table border="1" cellspacing="1" width="100%">
+  <tr>
+    <th width="20%" valign="top">Class Name</th>
+    <th width="26%" valign="top">Implements</th>
+    <th width="54%">Description</th>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>CvbWB</code></td>
+    <td width="26%" valign="top">
+<code>CComObjectRootEx</code>
+<br><code>IDispatchImpl</code>
+<br><code>CComControl</code>
+<br><code>IPersistStreamInitImpl</code>
+<br><code>IOleControlImpl</code>
+<br><code>IOleObjectImpl</code>
+<br><code>IOleInPlaceActiveObjectImpl</code>
+<br><code>IViewObjectExImpl</code>
+<br><code>IOleInPlaceObjectWindowlessImpl</code>
+<br><code>ISupportErrorInfo</code>
+<br><code>IConnectionPointContainerImpl</code>
+<br><code>IPersistStorageImpl</code>
+<br><code>ISpecifyPropertyPagesImpl</code>
+<br><code>IQuickActivateImpl</code>
+<br><code>IDataObjectImpl</code>
+<br><code>IProvideClassInfo2Impl</code>
+<br><code>IPropertyNotifySinkCP</code>
+<br><code>CComCoClass</code>
+<br><code>CProxy_IvbWBEvents</code>
+    </td>
+    <td width="54%" valign="top">This class was created as a Full ATL control using the wizard. It is responsible to host the
+      control in a client application (VB, C++), fire events, allow access to properties and
+methods of all WebBrowser controls to the hosting client. This task is achieved by using a
+      simple array of <code>IWB</code> pointers. The pointers are added and
+      removed from array in calls to <code>AddBrowser</code> and <code>RemoveBrowser</code> methods.
+      Each new instance of <code>IWB</code> is given a unique id <code>wbUID</code>.
+      The client application uses this id to access this instance of Webbrowser
+      control's properties and methods. Also, all events come with an extra
+      parammeter, <code>wbUID</code>, which identifies the Webbrowser instance
+      that has fired the event. In addition, This class contains a number of useful methods and
+      properties, <code>get_ActiveDocumentObj get_ActiveElementObj</code> (Returns Active
+      document or element. Accounts for frames), <code>DownloadUrlAsync</code> (Starts a file
+      download, allowing client app to monitor status via OnFileDL_xxx events), <code>ucInternetCrackUrl</code>
+      (To break a given URL into parts including filename and ext. Parts are
+      accessed via Get/Set ucXXX properties),...</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>IWB</code></td>
+    <td width="26%" valign="top"><code>IUnknown</code></td>
+    <td width="54%">This class is responsible to create and maintain a single
+instance of a Webbrowser&nbsp; control along with all the necessary classes such as <code>WBClientSite</code> (<code>IOleClientSite</code> implementation). Also, all QIs from all 
+the classes are routed through the same <code>IWB</code> instance that created them.
+      In addition, it contains a number of useful methods, <code>IsFrameset</code>, <code>FramesCount</code>
+      , <code>DocHighlightFindText</code>,...</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBClientSite</code></td>
+    <td width="26%" valign="top"><code>IOleClientSite</code></td>
+    <td width="54%">Required as part of Webbrowser control hosting interfaces. All methods return
+      E_NOTIMPL.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBInPlaceSite</code></td>
+    <td width="26%" valign="top"> <code>IOleInplaceSite</code></td>
+    <td width="54%">Required as part of Webbrowser control hosting interfaces. All methods return
+      E_NOTIMPL.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBEventDispatch</code></td>
+    <td width="26%" valign="top"> <code>IDispatch</code> </td>
+    <td width="54%">This class is the sink for Webbrowser control events. As the events arrive from
+      Webbrowser control, it fires 
+events to notify the client application.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBDocHostShowUI</code></td>
+    <td width="26%" valign="top"><code>IDocHostShowUI</code></td>
+    <td width="54%"> I am only handling <code>::ShowMessage</code> method which is responsible to intercept 
+HTTP messages and notifies the client via <code>Fire_ShowMessage</code> event to determine what to do with the message. A typical message may look like this:
+<br>Your current security settings prohibit running ActiveX controls on this page. As a result, the page may not display correctly.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBOleCommandTarget</code></td>
+    <td width="26%" valign="top"> <code>IOleCommandTarget</code></td>
+    <td width="54%"> The purpose of this class is to intercept Script errors via <code>::Exec</code> method, 
+and based on the <code>m_lScriptError</code> flag, either allow or disallow them.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBAuthenticate</code></td>
+    <td width="26%" valign="top"><code>IAuthenticate</code></td>
+    <td width="54%"> This class intercepts requests for basic authentication from servers, 
+notifies the client using <code>OnAuthentication</code>  event to obtain
+username and password. Useful for clients wanting to automate the process of logging in using 
+basic authentication schemes.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBDocHostUIHandler</code></td>
+    <td width="26%" valign="top"><code>IDocHostUIHandler</code></td>
+    <td width="54%"> The purpose of this class is to intercept 
+context menu (<code>::ShowContextMenu</code>), accelerator keys (<code>::TranslateAccelerator</code>), 
+and to set the UI flags (<code>::GetHostInfo</code>).</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBHttpSecurity</code></td>
+    <td width="26%" valign="top"> <code>IHttpSecurity</code></td>
+    <td width="54%"> This class intercepts HTTP related security problems, such as 
+<code>ERROR_HTTP_REDIRECT_NEEDS_CONFIRMATION</code>, <code>ERROR_INTERNET_SEC_CERT_CN_INVALID</code> via <code>OnSecurityProblem</code> method.
+      <b>
+ Please note</b>, using <code>::OnSecurityProblem</code> method or <code>OnHTTPSecurityProblem</code> event incorrectly can compromise the security of your application and 
+ potentially leave users of your application exposed to unwanted information disclosure.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBSecurityManager</code></td>
+    <td width="26%" valign="top"><code>IInternetSecurityManager</code></td>
+    <td width="54%"> This class only implemets <code>::ProcessUrlAction</code> method. It returns 
+<code>INET_E_DEFAULT_ACTION</code> for the rest of the methods. <b> Please note</b>, using <code>::ProcessUrlAction</code> method or 
+<code>SecurityManagerProcessUrlAction</code> event incorrectly may result in the incorrect processing of URL actions and possibly leave users 
+susceptible to elevation of privilege attacks.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBServiceProvider</code></td>
+    <td width="26%" valign="top"><code>IServiceProvider</code></td>
+    <td width="54%"> It is responsible to respond to <code>QueryService</code> calls on our 
+<code>IUknown(IWB)</code> in <code>::QueryService</code> method.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBWindowForBindingUI</code></td>
+    <td width="26%" valign="top"><code>IWindowForBindingUI</code></td>
+    <td width="54%"> It returns a hanlde to a window via <code>::GetWindow</code> method 
+which is used by MSHTML to display information in the client's user interface when necessary.&nbsp;Currently,
+      this method returns a hanlde to the Internet Explorer Server window.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBBSCBFileDL</code></td>
+    <td width="26%" valign="top"><code>IBindStatusCallback</code><br><code>IHttpNegotiate</code></td>
+    <td width="54%">An instance of this class is created and used 
+to receive callbacks and notify client app via <code>OnFileDLxxxx</code> events for all file downloads. By user clicking on a download link or 
+by using <code>::DownloadUrlAsync</code> method from code.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBDownLoadManager</code></td>
+    <td width="26%" valign="top"><code>IDownloadManager</code></td>
+    <td width="54%">It implements <code>::Download</code> method which in 
+turn creates an instance of our <code>IBindStatusCallback</code> implementation (<code>WBBSCBFileDL</code>), registers our BSCB for callbacks and
+      notifies the client via 
+<code>OnFileDLxxxx</code> events of the progress of the download. Each BSCB is
+      given a Unique ID and a pointer to it is stored in a simple array in the <code>CvbWB</code> class
+      instance. This ID can be used by client app to cancel a download by calling <code>CancelFileDl</code> passing the id.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>CTmpBuffer</code></td>
+    <td width="26%" valign="top">&nbsp;</td>
+    <td width="54%">A simple string buffer class, since <code>CString</code> is not available due to minimum
+      dependency requirement.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>CUrlParts</code></td>
+    <td width="26%" valign="top">&nbsp;</td>
+    <td width="54%">A simple class which uses <code>InternetCrackUrl</code> method of <Code>WinInet</code> to break a given URL into it's parts. This includes 
+file name and ext, if available.</td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top"><code>WBPassThruSink</code></td>
+    <td width="26%" valign="top"><Code>CInternetProtocolSinkWithSP</code><br><code>IHttpNegotiate</code></td>
+    <td width="54%">This class is the sink for the protocol handlers.</td>
+  </tr>
+<TR>
+	<TD vAlign=top width="20%"><CODE>WBDropTarget</CODE></TD>
+	<TD vAlign=top width="26%"><CODE>IDropTarget</CODE></TD>
+	<TD width="52%">To handle custom dragdrop.</TD>
+</TR>
+<TR>
+	<TD vAlign=top width="20%"><CODE>WBDocHostUIHandler</CODE></TD>
+	<TD vAlign=top width="26%"><CODE>IDocHostUIHandler2</CODE></TD>
+	<TD width="54%">To handle <CODE>GetOverrideKeyPath</CODE> method.</TD>
+</TR>
+<TR>
+	<TD vAlign=top width="20%"><CODE>WBStream</CODE></TD>
+	<TD vAlign=top width="26%"><CODE>IStream</CODE></TD>
+	<TD width="54%">To handle uploads with progress.</TD>
+</TR>
+</table>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<H2><a name="Setting up the control">Setting up the control</a></H2>
+<UL>
+<LI>Copy <I>vbMHWB.dll</I> located in <I>Binaries</I> sub folder to your system dir. 
+<LI>Register <I>vbMHWB.dll</I> using <I>regsvr32.exe</I>. 
+<LI>Open VBDemo or MFCDemo project. 
+</UL>
+
+<pre>How to register example, (assuming system dir path is '<I>C:\windows\system32\</I>') <I>regsvr32.exe</I> C:\windows\system32\vbMHWB.dll.
+</pre>
+
+<h2><a name="About Demo Applications">About Demo Applications</a></h2>
+
+<h4><font color="#FF9900">VBDemo and MFCDemo:</font></h4>
+<p>Both demo projects are almost identical in terms of GUI and their use of the
+control. The VBDemo was build using <code>Visual Basic 6.0</code> and has no dependencies
+other than this control. The MFCDemo project was build using <code>Visual C++ 6.0</code> and
+also has no other dependencies. With MFCDemo, you need to treat <code>BOOL</code> as
+<code>VARIANT_BOOL</code> (Wizard translates <code>VARIANT_BOOL</code> as <code>BOOL</code>), 
+and make sure that value of an in/out BSTR parameter is released (<code>ClearBSTRPtr</code>
+method is provided as an example) before assigning a new value. This step is necessary
+to avoid memory leaks.</p>
+<h4><font color="#FF9900">VBDemoEX:</font></h4>
+
+<p>Note: this demo is not intended for novice programmers and should be viewed as a
+learning and experimental tool. Expect bugs!</p>
+
+<p>This project was build using <code>Visual Basic 6.0</code>. It does depend on an external 
+type library <code>WinApiForVb.tlb</code>. This library was put together by me a while back to 
+avoid copying and pasting API declarations in every new VB project. It consists of 950 KB of API declarations (ANSI+UNICODE). The 
+source and the compiled versions of the <code>WinApiForVb.tlb</code> have been provided in <code>WinApiForVb-Source</code> and 
+<code>WinApiForVb_Compiled</code> sub folders.
+</p>
+<UL>
+<LI>Copy <I>vbMHWB.dll</I> located in <I>Binaries</I> sub folder to your system dir.
+<LI>Copy <I>WinApiForVb.tlb</I> located in <I>WinApiForVb_Compiled</I> sub folder to your system dir.
+<LI>Register <I>vbMHWB.dll</I> using <I>regsvr32.exe</I>. 
+<LI>Open VBDemoEX project.
+<LI>Go to Project->References
+<LI>Check the entry "WinApi For VB type library" and click OK. Done
+</UL>
+
+<p>Build versions have been included in Binaries sub folder for all projects.</p>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<H3><a name="Properties">Properties</a></H3>
+<UL>
+<LI><P><CODE lang=vbnet>Count As Integer</CODE> - Read only. 
+<br>Returns Web browser's count.</P>
+<LI><p><CODE lang=vbnet>RegisterAsDropTarget(wbUID As Integer, bUseIEDefault As Boolean) As Boolean</code>
+<br>To use IE default drag drop functionality, set bUseIEDefault to true. Default value is false, uses internal drag drop mechanism via WBDrag/Drop events.</p>
+<LI><P><CODE lang=vbnet>ActiveElementObj(wbUID As Integer) As Object</CODE> - Read only. 
+<br>Returns active element dispatch object for specified <CODE>wbUID</CODE>. Accounts for frames.</P>
+<LI><P><CODE lang=vbnet>ActiveDocumentObj(wbUID As Integer) As Object</CODE> - Read only. 
+<br>Returns active document dispatch object for specified <CODE>wbUID</CODE>. Accounts for frames.</P>
+<LI><P><CODE lang=vbnet>ObjectWB(wbUID As Integer) As Object</CODE> - Read only. 
+<br>Returns dispatch object for specified <CODE>wbUID</CODE>.</P>
+<LI><P>**<CODE lang=vbnet>ContextMenuAction([wbUID As Integer]) As Long</CODE> 
+<br>Default=0 do not display, 1 display all, 2 raise <CODE>OnContextMenu</CODE> event.</P>
+<LI><P>**<CODE lang=vbnet>DocumentDownloadControlFlags([wbUID As Integer]) As Long</CODE> 
+<br>Default=<CODE>_DLIMAGES</CODE>,<CODE>_VIDEOS</CODE>,<CODE>_BGSOUNDS</CODE>. Refresh
+  Webbrowser control for new flags to take effect.</P>
+<LI><P>**<CODE lang=vbnet>DocumentHostUiFlags([wbUID As Integer]) As Long</CODE> 
+<br>Default=<CODE>TextSelect</CODE>,<CODE>No3DBorder</CODE>,<CODE>FlatScrollbars</CODE>. Refresh
+  Webbrowser control for new flags to take effect.</P>
+<LI><P>**<CODE lang=vbnet>DocumentHostUiDoubleClickAction([wbUID As Integer]) As Long</CODE> 
+<br><CODE>DEFAULT</CODE>=0, <CODE>SHOWPROPERTIES</CODE> = 1, <CODE>SHOWCODE</CODE>/<CODE>Source</CODE> = 2. Refresh
+  Webbrowser control for new flags to take effect.</P>
+<LI><P><CODE lang=vbnet>IsDocFrameset(wbUID As Integer) As Boolean</CODE> 
+<br>Returns <CODE lang=vbnet>True</CODE> if the document specified by <CODE>wbUID</CODE> contains frames.</P>
+<LI><P>*<CODE lang=vbnet>ucScheme As String</CODE> 
+<br>Set/Get URL scheme as string: HTTP, HTTPS.</P>
+<LI><P>*<CODE lang=vbnet>ucHostName As String</CODE> 
+<br>Set/Get URL host name.</P>
+<LI><P>*<CODE lang=vbnet>ucPort As Long</CODE> 
+<br>Set/Get URL port.</P>
+<LI><P>*<CODE lang=vbnet>ucUserName As String</CODE> 
+<br>Set/Get URL username.</P>
+<LI><P>*<CODE lang=vbnet>ucPassword As String</CODE> 
+<br>Set/Get URL password.</P>
+<LI><P>*<CODE lang=vbnet>ucUrlPath As String</CODE> 
+<br>Set/Get URL path.</P>
+<LI><P>*<CODE lang=vbnet>ucExtraInfo As String</CODE> 
+<br>Set/Get URL extra info.</P>
+<LI><P>*<CODE lang=vbnet>ucFullURL As String</CODE> 
+<br>Set/Get full URL.</P>
+<LI><P>*<CODE lang=vbnet>ucFileName As String</CODE> - Read only 
+<br>Get URL filename.</P>
+<LI><P>*<CODE lang=vbnet>ucFileExtension As String</CODE> - Read only 
+<br>Get URL file extension.</P>
+<LI><P>*<CODE lang=vbnet>ucInternetScheme As Long</CODE> 
+<br>Set/Get URL Scheme as <CODE lang=c++>long</CODE>.</P>
+<LI><P><CODE lang=vbnet>HWNDShellDocObjectView(wbUID As Integer) As Long</CODE> - Read only 
+<br>Returns <CODE>HWND</CODE> of <CODE>ShellDocObjectView</CODE> for specified <CODE>wbUID</CODE>.</P>
+<LI><P><CODE lang=vbnet>HWNDInternetExplorerServer(wbUID As Integer) As Long</CODE> - Read only 
+<br>Returns <CODE>HWND</CODE> of <CODE>InternetExplorerServer</CODE> for specified <CODE>wbUID</CODE>.</P>
+<LI><P><CODE lang=vbnet>HWNDMainWnd As Long</CODE> - Read only 
+<br>Returns <CODE>HWND</CODE> of the main DLL window where all Web browsers are hosted.</P>
+<LI><P><CODE lang=vbnet>HWNDShellEmbedding(wbUID As Integer) As Long</CODE> - Read only 
+<br>Returns <CODE>HWND</CODE> of <CODE>ShellEmbedding</CODE> for specified <CODE>wbUID</CODE>.</P>
+<LI><P><CODE>StartupURL As String</CODE> 
+<br>Initial startup URL. Default about:blank.</P>
+<LI><p>**<CODE lang=vbnet>UseIEDefaultFileDownload([wbUID As Integer]) As Boolean</CODE> 
+<br>Default=<CODE lang=vbnet>False</CODE>, using internal download mechanism, send <CODE>FileDownloadEx</CODE> and <CODE>OnFileDLxxx</CODE> events.</P>
+<LI><P><CODE lang=vbnet>FramesCount(wbUID As Integer) As Long</CODE> - Read only 
+<br>Returns number of frames for specified <CODE>wbUID</CODE>.</P>
+<LI><P><CODE lang=vbnet>WBVisible(wbUID As Integer) As Boolean</CODE> 
+<br>Set/Get visible state for specified <CODE>wbUID</CODE>.</P>
+<LI><p><CODE lang=vbnet>WBPageTextSize(wbUID As Integer)</code> 
+<br>Set/Get page zoom level. valid values 0 to 4 (smallest-largest).</p>
+<LI><p><CODE>SourceOnDocComplete(wbUID As Integer) As Boolean</CODE>
+<br>If set to True, fires <code>DocumentCompleteWBEx</code> instead of <code>DocumentComplete</code> passing document text before any scripts are executed.
+</p>
+
+<P><B>Note</B>* Properties are used in combination with two methods <CODE>ucInternetCrackUrl</CODE> and <CODE>ucInternetCreateUrl</CODE>.</P>
+<P><B>Note</B>** If <CODE>wbUID</CODE> is greater than 0, action is of the specific <CODE>wbUID</CODE> else action will be applied to all
+Webbrowser controls. Less for client to do.</P></LI></UL>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<H3><a name="CtlEvents">Events</a></H3>
+<UL>
+<LI><P><CODE lang=vbnet>OnWBKeyDown(wbUID As Integer, nKeyCode As Integer, nVirtExtKey As Integer, bHandled As Boolean)</code>
+<br>Fired when a key is down within browser window. <code>bHandled</code> default value is False. Set <code>bHandled</code> to True to consume the key.
+</P>
+<LI><P><CODE lang=vbnet>OnWBKeyUp(wbUID As Integer, nKeyCode As Integer, nVirtExtKey As Integer, bHandled As Boolean)</code>
+<br>Fired when a key is up within browser window. <code>bHandled</code> default value is False. Set <code>bHandled</code> to True to consume the key.
+</P>
+<LI><P><CODE lang=vbnet>DocHostShowMessage(wbUID As Integer, lHwnd As Long, strText As String, strCaption As String, lType As Long, strHelpFile As String, lHelpContext As Long, lReturnValue As Long, ShowMsgInternaly As Boolean)</code>
+<br>Fires before an HTML message, including javascript alerts, is about to be displayed. To display own messagebox, set <code>ShowMsgInternaly</code> to false and set <code>lReturnValue</code> to the return value.
+</P>
+<LI><P><CODE lang=vbnet>OnShowScriptError(wbUID As Integer, vErrorLine, vErrorCharacter, vErrorCode, vErrorMsg, vErrorURL, bStopRunningScript As Boolean)</code>
+<br>Fires when there is a script error passing relative information. Default value of <code>bStopRunningScript</code> is <code>True</code>.
+</P>
+<LI><P><CODE lang=vbnet>FindAnyTextMatchCallback(wbUID As Integer, pHtmlDoc2Disp As Object, pTxtRangeElemDisp As Object, bStopSearch As Boolean)</code>
+<br>Fired in response after a call to <code>FindAnyTextMatch</code> and if a match is found.
+<br>Searching for a match continues till <code.bStopSearch</code> is set to true or no more matches. Frames are searched as well.
+<br><code>pHtmlDoc2Disp</code> contains <code>IDispatch</code> of the document object.
+<br><code>pTxtRangeElemDisp</code> contains <code>IDispatch of IHTMLTxtRange</code> element used to find given text
+</P>
+<LI><P><CODE lang=vbnet>ProtocolHandlerOnBeginTransaction(ByVal wbUID As Integer, ByVal sURL As String, ByVal sRequestHeaders As String, sAdditionalHeaders As String, Cancel As Boolean)</code>
+<br>Fired by the HTTP or HTTPS protocol handler before sending the request headers to a server. Fired after BeforeNavigate2. This includes HTML, images, CSS, ... To activate or deactivate protocol handlers, use RegisterHTTPprotocol or RegisterHTTPSprotocol. Additional headers can be added using sAdditionalHeaders parameter. Default, Cancel = False. Request can be cancelled by setting Cancel to True.</P>
+<LI><P><CODE lang=vbnet>ProtocolHandlerOnResponse(ByVal wbUID As Integer, ByVal sURL As String, ByVal sResponseHeaders As String, ByVal sRedirectedUrl As String, ByVal sRedirectHeaders As String, Cancel As Boolean)</code>
+<br>Fired by the HTTP or HTTPS protocol handler after receiving the response headers from the server. This includes any redirect headers that were sent after a normal response. Fired before DocumentComplete. To activate or deactivate protocol handlers, use RegisterHTTPprotocol or RegisterHTTPSprotocol. If sRedirectedUrl has value, it indicates that during the initial request, we were redirected to another site.
+<br>Default, Cancel = True. Request can be cancelled by setting Cancel to True.</P>
+<LI><P><CODE lang=vbnet>NewWindow2(ByVal wbUID As Integer, ppDisp As Object, Cancel As Boolean) </code>
+<br>A new, hidden, non-navigated web browser window is needed. Default, Cancel = True.</P>
+<LI><P><CODE lang=vbnet>NewWindow3(ByVal wbUID As Integer, ppDisp As Object, Cancel As Boolean, ByVal lFlags As Long, ByVal sURLContext As String, ByVal sURL As String)</code>
+<br>This event has been added in addition to the NewWindow2 event. Fires before NewWindow2 and is only available in XP SP2 and higher. Default, Cancel = True.</P>
+<LI><P><CODE lang=vbnet>OnAuthentication(ByVal wbUID As Integer, sUsername As String, sPassword As String, Cancel As Boolean)</code>
+<br>Network authentication. Supports basic authentication. Can be used to automate network log-ins without user interaction. Default, Cancel = False.</P>
+<LI><P><CODE lang=vbnet>OnContextMenu(ByVal wbUID As Integer, ByVal ContextMenuType As Long, ByVal X As Long, ByVal Y As Long, ByVal ObjElem As Object, ctxDisplay As Boolean)</code>
+<br>Fired before the context menu is displayed. ctxDisplay default value is False.</P>
+<LI><P><CODE lang=vbnet>OnGetOptionKeyPath(ByVal wbUID As Integer, sRegistryOptionKeyPath As String)</code
+<br>Points the web browser control to a registry key located at <I>HKEY_CURRENT_USER/Software/YourCompany/YourApp</I> for registry overrides.</P>
+<LI><P><CODE lang=vbnet>OnGetOverrideKeyPath(ByVal wbUID As Integer, sRegistryOverrideKeyPath As String)</code>
+<br>Points the web browser control to a registry key located at <I>HKEY_CURRENT_USER/Software/YourCompany/YourApp</I> for user preference overrides.</P>
+<LI><P><CODE lang=vbnet>OnWBDragEnter(ByVal wbUID As Integer, ByVal KeyState As Integer, ByVal ptX As Long, ByVal ptY As Long, lEffect As Long)</code>
+<br>Keystate, combination of MK_CONTROL, MK_SHIFT, MK_ALT, MK_BUTTON, MK_LBUTTON, MK_MBUTTON, and MK_RBUTTON. ptX and ptY are in screen coordinates</P>
+<LI><P><CODE lang=vbnet>OnWBDragLeave(ByVal wbUID As Integer)</code>
+<br>DragLeave - cancelled.</P>
+<LI><P><CODE lang=vbnet>OnWBDragOver(ByVal wbUID As Integer, ByVal KeyState As Integer, ByVal ptX As Long, ByVal ptY As Long, lEffect As Long) </code>
+<br>Parameters are same as OnWBDragEnter event.</P>
+<LI><P><CODE lang=vbnet>OnWBDrop(ByVal wbUID As Integer, ByVal KeyState As Integer, ByVal ptX As Long, ByVal ptY As Long, ByVal lpData As String,ByVal lWBDropFormat As Long, lEffect As Long) </code>
+<br>Fired for a single file or data drops. Drop- lpData will contain the dropped filename or data. lWBDropFormat can be one of:
+<UL>
+<LI>WB_CFHTML = 0 (includes HTML tags)
+<LI>WB_CFTEXT = 1
+<LI>WB_CFSINGLEFILE = 2
+<LI>WB_CFRTF = 3 (Includes RTF tags)
+<LI>WB_CFERROR = 4
+</LI></UL></p>
+<LI><P><CODE lang=vbnet>OnWBDrop2(ByValwbUID As Integer, ByVal KeyState As Integer, ByVal ptX As Long, ByVal ptY As Long, ByVal vData, lEffect As Long) </code>
+<br>Fired for multiple file name drops, i.e. from explorer. - vData will contain a string array VT_ARRAY|VT_BSTR of dropped file names.</P>
+<LI><P><CODE lang=vbnet>OnPostResponse(ByValPostUID As Integer, ByVal sURL As String, ByVal lResponseCode As Long, ByVal sResponseHeaders As String) </code>
+<br>Fired after a response is available from the server.</P>
+<LI><P><CODE lang=vbnet>OnPostOnProgress(ByValPostUID As Integer, ByVal sURL As String, ByVal lProgress As Long, ByVal lProgressMax As Long, ByVal lStatusCode As Long, ByVal sStatusText As String, CancelPost As Boolean) </code>
+<br>Fired during data arrival in response to a post request.</P>
+<LI><P><CODE lang=vbnet>OnPostError(PostUID As Integer, sURL As String, sErrorMsg As String) </code>
+<br>Fired if any errors occur.</P>
+<LI><P><CODE lang=vbnet>OnPostEnd(ByValPostUID As Integer,ByVal sURL As String) </code>
+<br>Fired to signal the end of a post request.</P>
+<LI><P><CODE lang=vbnet>OnPostDataAvailable(ByVal PostUID As Integer, ByVal sURL As String, ByVal pData As String, CancelPost As Boolean) </code>
+<br>Fired if any data has been received.</P>
+<LI><P><CODE lang=vbnet>OnWMMessage(ByVal hWnd As Long, ByVal uMsg As Long, ByVal wParam As Long, ByVal lParam As Long, lReturn As Long, Handled As Boolean) </code>
+<br>Fired in response to a WM_xxx message. This message must have been added to a subclassed window message, using AddMessage method. uMsg, one of the WM_xxxx messages. Defaults, Handled = False, lReturn = 0</P>
+<LI><P>*<CODE lang=vbnet>OnFileDLProgress(ByVal sURL As String, ByVal lProgress As Long, ByVal lProgressMax As Long, CancelDl As Boolean)</code>
+<br>On download progress.</P>
+<LI><P>*<CODE lang=vbnet>OnFileDLEndDownload(ByVal sURL As String) </code>
+<br>On end of download.</P>
+<LI><P>*<CODE lang=vbnet>OnFileDLDownloadError(ByVal sURL As String, ByVal sErrorMsg As String) </code>
+<br>On download errors.</P>
+<LI><P>*<CODE lang=vbnet>OnFileDLBeginningTransaction(Byval FileDlUID As Integer, Byval sURL As String, Byval sRequestHeaders As String, sAdditionalRequestHeaders As String, bResuming As Boolean, bCancel As Boolean) </code>
+<br>Fired before sending request headers to the server for a file download initiated by the DownloadAsync method. Gives client a chance to add additional headers. If the local file exists, you can set bResuming to True, indicating that the control should start writing to the end of the local file when the data arrives. You should also add a range header to the sAdditionalRequestHeaders parameter to attempt to resume a broken download.
+<UL>
+<LI>Syntax: Range: bytes=n-m.
+<LI>Range = "Range" ":" ranges-specifier.
+</LI></UL></p>
+<LI><P>*<CODE lang=vbnet>OnFileDLResponse(ByVal sURL As String, ByVal lResponseCode As Long, ByVal sResponseHeaders As String, CancelDl As Boolean) </code>
+<br>Fired after receiving the first initial response from the server. Can examine sResponseHeaders and lResponseCode to determine whether to continue or abort the download.</P>
+<LI><P>*<CODE lang=vbnet>OnFileDLCancelDownload(ByVal sURL As String, ByVal CancelledDuringDL As Boolean) </code>
+<br>Fired to signal that a download has been cancelled.</P>
+<LI><P>*<CODE lang=vbnet>FileDownloadEx(ByVal wbUID As Integer, ByVal FileDlUID As Integer, ByVal sURL As String, ByVal sFilename As String, ByVal sExt As String, ByVal sExtraHeaders As String, ByVal sRedirURL As String, SendProgressEvents As Boolean, bStopDownload As Boolean, sPathToSave As String) </code>
+<br>By default, vbMHWB takes over all web browser control file downloads internally. This gives the developer the ability to control the download using OnFileDLxxx events. If you wish to use the default behaviour of web browser control, set UseIEDefaultFileDownload to True. This event is called in place of the FileDownload event if UseIEDefaultFileDownload = False.
+<UL>
+<LI>FileDlUID - UID for this file download, can be used to stop a download using the CancelFileDl method. Default, SendProgressEvents = True (sends OnFileDLProgress). 
+<LI>sFilename = <I>xxx.zip</I>. 
+<LI>sExt = <I>.zip</I>. 
+<LI>sURL = <I>http://www.site.com/folder/xxxxx/xxx.zip</I>. 
+<LI>sRedirURL = URL of the site we have been redirected to. 
+<LI>sExtraHeaders = Response headers received from the server in response to our request. 
+<LI>Default, bStopDownload = False.
+<LI>sPathToSave = Must be in the form of <I>Fullpath/Filename.ext</I>. If no value is passed then the file will be saved in the same directory as the EXE with the format <I>sFilename/sExt</I>.
+</LI></UL></p>
+<LI><P><CODE lang=vbnet>DocumentCompleteWBEx(ByVal wbUID As Integer, URL As Variant, ByVal pDisp As Object, ByVal isTopLevel As Boolean, ByVal sDocSource As String) </code>
+<br>If SourceOnDocComplete property is set to true then this event is fired passing the source of the pDisp object (if HTML based) via sDocSource parameter before any scripts are executed.</p>
+<LI><P><CODE lang=vbnet>WBProcessUrlAction(ByVal wbUID As Integer, ByVal sURL As String, ByVal lUrlAction As Long, ByVal PUAF_Flag As Long, lpUrlPolicy As Long, bHandled As Boolean)</code>
+<br>lUrlAction, one of URL Action values. PUAF_Flag, one of PUAF enum. By default, bHandled is false, if setting lpUrlPolicy parameter, you also need to set the bHandled to true. lpUrlPolicy parameter is declared as long variable that can be set by client, one of URL Policy Flags.
+</p>
+<LI><P><CODE lang=vbnet>WBEvaluateNewWindow(ByVal wbUID As Integer, ByVal sURL As String, ByVal sName As String, ByVal sURLContext As String, ByVal sFeatures As String, ByVal bReplace As Boolean, ByVal lFlags As Long, ByVal lUserActionTime As Long, lPopUpAction As Long)</code>
+<br>WinXPsp2 and up<br>
+lPopUpAction default value set to E_FAIL (-2147467259) (Perform default IE action).<br>
+First calls NewWindow3 , then NewWindow2, if popup is not cancelled then displays the popup.<br>
+To cancel set lPopUpAction to 1. To allow set lPopUpAction to 0. lFlags one of NEW_WINDOW3_FLAGS enum
+</p>
+<P><B>Note</B>* Events are generated while using DownloadUrlAsync or by using the vbMHWB internal downloader by setting UseIEDefaultFileDownload to True (default is False). The DLL uses the internal download mechanism by default.
+</P></LI></UL>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<H3><a name="Methods">Methods</a></H3>
+<UL>
+<LI><P><CODE lang=vbnet>Sub AddBrowser(wbUID As Integer, [bBringToFront As Boolean = False])</CODE> 
+<br>Attempts to add new Web browser. If successful, returns the new ID contained in <CODE>wbUID</CODE>.<br>
+<code>bBringToFront</code> allows the client to open the new Web browser in the background.</P>
+<LI><P><CODE lang=vbnet>Sub SaveAsBitmap(wbUID As Integer, BitmapName As String)</CODE> 
+<br>Saves the entire page, no scroll bars, or borders to a file passed in <CODE>BitmapName</CODE> param.</P>
+<LI><P><CODE lang=vbnet>Sub DrawWBThumbnailOnWnd(wbUID As Integer, WndHdc As Long, lX As Long, lY As Long, lW As Long, lH As Long)</CODE> 
+<br>Draws an image of the web browser's viewing area on a given <CODE>WndHdc</CODE>. Routine uses <CODE>StretchBlt</CODE> to fit the image based on <CODE>lX</CODE> (left), <CODE>lY</CODE> (top), <CODE>lW</CODE> (width), <CODE>lH</CODE> Height.</P>
+<LI><P><CODE lang=vbnet>Sub LoadHTMLFromString(wbUID As Integer, sContent As String, sBaseUrl As String)</CODE> 
+<br>Loads <CODE>sContent</CODE> into a stream which is then loaded into the document. Unlike <CODE>document.write</CODE>, scripts are executed.
+<br>If content is greater than 256 characters then a <code>base</code> tag must be present to dispaly the entire content.
+<br><code>sBaseUrl</code> sample: http://www.google.com.</P>
+<LI><P><CODE lang=vbnet>Sub DisplayCertificateDialog(wbUID As Integer)</CODE> 
+<br>Displays the certificate dialog for a valid HTTPS site. This is the same as the user clicking the lock icon in IE6.</P>
+<LI><P><CODE lang=vbnet>Sub ucResetFieldsToDefault()</CODE> 
+<br>Resets all the ucxxxx fields to their default.</P>
+<LI><P><CODE lang=vbnet>Sub SubclassWnd(hwndWnd As Long)</CODE> 
+<br>Subclass a window specified by <CODE>hwndWnd</CODE> and receive <CODE>onWMxxxx</CODE> messages.</P>
+<LI><P><CODE lang=vbnet>Sub UnSubclassWnd(hwndWnd As Long)</CODE> 
+<br>Unsubclass a previously subclassed window.</P>
+<LI><P><CODE lang=vbnet>Sub AddMessage(hwndWnd As Long, lMsg As Long)</CODE> 
+<br>Add a <CODE>WM_xxx</CODE> message for a subclassed window. Only the messages added via this method will have an event fired for them.</P>
+<LI><P><CODE lang=vbnet>Sub SetupShellAutoComplete(hwndTarget As Long, IsTargetComboBox As Boolean, lFlags As AUTOCOMPLETE_FLAGS)</CODE> 
+<br>A wrapper for <CODE>SHAutoComplete</CODE> method. If <CODE lang=vbnet>IsTargetComboBox = True</CODE>, attempts to find the Edit ctl part.</P>
+<LI><p><CODE lang=vbnet>Sub SetupCustomAutoComplete(hwndTarget As Long, IsTargetComboBox As Boolean, lCustomAutoCompleteFlags As Long, varStringArray)</code><br>
+Enables custom autocomplete using <code>IEnumString and IAutoComplete</code> interfaces. varStringArray must be a BSTR array. If IsTargetComboBox = True, attempts to find the Edit control part.</p>
+<LI><p><CODE lang=vbnet>Sub CustomAutoCompleteAddString(hwndTarget As Long, IsTargetComboBox As Boolean, strItem As String)</code><br>
+Adds a string to a previously activated custom autocomplete. Does not check for duplicates.</p>
+<LI><P><CODE lang=vbnet>Sub CustomAutoCompleteEnable(hwndTarget As Long, IsTargetComboBox As Boolean, bEnable As Boolean)</code><br>
+Enables or disables a previously activated custom autocomplete.</P>
+<LI><P><CODE lang=vbnet>Sub QueryIERegistryOption(IeRegistryOptionsFlag As Long, varBuffer)</code><br>
+Queries HKEY_CURRENT_USER\\Software\\Microsoft\\Internet Explorer\\Main for one of IE_REGISTRY_OPTIONS_FLAGS enum<br>
+<code>varBuffer</code> must be an empty VARIANT.
+<UL>
+<LI>DISABLE_SCRIPT_DEBUGGER
+<LI>ERROR_DLG_DISPLAYED_ON_EVERY_ERROR
+<LI>PLAY_ANIMATIONS
+<LI>PLAY_BACKGROUND_SOUNDS
+<LI>DISPLAY_INLINE_VIDEOS
+<LI>DISPLAY_INLINE_IMAGES
+<LI>FORMSUGGEST_PW_ASK
+<LI>USE_FORMSUGGEST
+<LI>USE_SEARCH_ASST
+</LI></UL>
+</P>
+<LI><P><CODE lang=vbnet>Sub SetIERegistryOption(IeRegistryOptionsFlag As Long, varBuffer)</code><br>
+Uses HKEY_CURRENT_USER\\Software\\Microsoft\\Internet Explorer\\Main to set one of IE_REGISTRY_OPTIONS_FLAGS enum</P>
+<LI><P><CODE lang=vbnet>Sub DecodeMime(byVal strToDecode As String, strDecoded As String)</code><br>
+Replaces MIME encoded strings. %25 -> %</P>
+<LI><P><CODE lang=vbnet>Sub DeleteIEFiles(enumWhichFiles As DELETE_IE_FILES_FLAGS)</CODE><BR>
+Attempts to delete IE cache or history, or cookies.</P>
+<LI><P><CODE lang=vbnet>Sub FindTextSimple(wbUID As Integer, TextToFind As String, bDownward As Boolean, bMatchWholeWord As Boolean, bMatchCase As Boolean, bScrollIntoView As Boolean, FindMatch As Boolean)</CODE> 
+<br>Attempts to find a given text in a document. Accounts for frames and are able to continue a search. Returns an error if no matches are found.</P>
+<LI><P><CODE lang=vbnet>Sub FindAndHighlightAllText(wbUID As Integer, TextToFind As String, bMatchWholeWord As Boolean, bMatchCase As Boolean, HighlightColor As String, NumOfMatchsFound</CODE> As Long) 
+<br>Attempts to find and highlight all text in the active document. Accounts for frames. Color example greenyellow. <CODE lang=vbnet>NumOfMatchsFound</CODE> returns number of matches found.</P>
+<LI><p><CODE lang=vbnet>Sub FindAndHighlightAllTextFrames(wbUID As Integer, TextToFind As String, bMatchWholeWord As Boolean, bMatchCase As Boolean, HighlightColor As String, NumOfMatchsFound As Long)</code><br>
+Attempts to find and heighlight all text in the document, including frames. Color example greenyellow. Returns number of matches found</p>
+<LI><P><CODE lang=vbnet>Sub FindAnyTextMatch(wbUID As Integer, TextToFind As String, bMatchWholeWord As Boolean, bMatchCase As Boolean, FindMatch As Boolean)</CODE> 
+<br>Attempts to find a given text. Accounts for frames. If <CODE>FindMatch</CODE> equals <CODE lang=vbnet>True</CODE>, we have a match.<br>If any matches are found, <code>FindAnyTextMatchCallback</code> event is fired which exposes the document and the HtmlTxtRange dispatch.</P>
+<LI><P><CODE lang=vbnet>Sub ucInternetCrackUrl(URL As String, bSuccess As Boolean)</CODE> 
+<br>Cracks URL into components. Use <CODE>ucXXX</CODE> properties to access various parts of a cracked URL. Success if <CODE>bSuccess</CODE> returns <CODE lang=vbnet>True</CODE>.</P>
+<LI><P><CODE lang=vbnet>Sub DownloadUrlAsync(ByVal URL As String, ByVal SaveFileName As String, DLUID As Integer)</CODE> 
+<br>Downloads a URL target to a file asynchronously. Generates events to track the download. <CODE>DLUID</CODE> is the unique ID of the instance of the class downloading the file. Normally, you can cancel a dl using events that are received, but in case of a stalled dl, we can use this ID to call <CODE>CancelFileDl</CODE> to force <CODE>URLMon</CODE> to abort the dl, we should get a <CODE>OnFileDLCancelDownload</CODE> event afterwards.</P>
+<LI><P><CODE lang=vbnet>Sub ucInternetCreateUrl(URL As String)</CODE> 
+<br>Uses <CODE>ucXXX</CODE> various parts to create a URL.</P>
+<LI><P><CODE lang=vbnet>Sub RemoveBrowser(wbUIDToRemove As Integer)</CODE> 
+<br>Remove web browser based on a given UID.</P>
+<LI><P><CODE lang=vbnet>Sub SetFocusW(wbUID As Integer)</CODE> 
+<br>Sets focus to a web browser based on <CODE>wbUID</CODE>.</P>
+<LI><P><CODE lang=vbnet>Sub PlaceWBOnTop(wbUID As Integer)</CODE> 
+<br>Places Webbrowser control on top of Zorder by UI activating the it.</P>
+<LI><P><CODE lang=vbnet>Function AnyDocHasFocus() As Integer</CODE> 
+<br>Returns the <CODE>wbUID</CODE> of any Web browser that has focus or 0.</P>
+<LI><P><CODE lang=vbnet>Sub NavigateSimple(wbUID As Integer), URL As String)</CODE> 
+<br>Navigate to URL.</P>
+<LI><p><CODE lang=vbnet>Sub SetupWindowsHook(lHookType As WINDOWSHOOK_TYPES, hwndTargetWnd As Long, bStart As Boolean, lUWMHookMsgID As Long)</code>
+<br>Installs/Uninstalls 11 different kinds of windows hooks.
+<br><code>hwndTargetWnd</code> is the handle of the window to receive hook messages in it's wndproc function.<br>
+<code>lUWMHookMsgID</code> is passed to client. It contains a unique message id registered using <code>RegisterWindowMessage</code>. Client application looks for this id in wndproc to intercept hook calls. To consume a hook call, client need to return 1 and indicate that the message was handled.
+<UL>
+<LI>WHT_CALLWNDPROC
+<LI>WHT_CBT
+<LI>WHT_GETMESSAGE
+<LI>WHT_KEYBOARD
+<LI>WHT_MOUSE
+<LI>WHT_MSGFILTER
+<LI>WHT_KEYBOARD_LL
+<LI>WHT_MOUSE_LL
+<LI>WHT_FOREGROUNDIDLE
+<LI>WHT_CALLWNDPROCRET
+<LI>WHT_SYSMSGFILTER
+</LI></UL>
+<LI><P><CODE lang=vbnet>Sub HookProcNCode(lHookType As WINDOWSHOOK_TYPES, nCode As Long)</code>
+<br>Enables client application to retrieve the <code>nCode</code> param from three hook callback
+functions. <code>WHT_CBT, WHT_MSGFILTER, and WHT_SYSMSGFILTER</code>. For the rest of the windows hooks, the nCode param is meanningless.</p>
+<LI>*<CODE lang=vbnet>Sub GoSearch(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Refresh2(wbUID As Integer, level)</CODE> 
+<LI>*<CODE lang=vbnet>Sub SelectAll(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Paste(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Copy(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Cut(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Undo(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Redo(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub ClearSelection(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Delete(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Find(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub PasteSpecial(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Spell(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Properties(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub NewWindow(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub FileOpen(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Save(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub SaveAs(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Print(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub PrintPreview(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub PageSetup(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub Print2(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub PrintPreview2(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub ViewSource(wbUID As Integer)</CODE> 
+<LI>*<CODE lang=vbnet>Sub AddToFavorites(wbUID As Integer)</CODE>
+<LI>*<CODE lang=vbnet>Sub ViewIEOptions(wbUID As Integer)</CODE>
+<LI>*<CODE lang=vbnet>Sub OrganizeFavorites</CODE>
+</LI></UL>
+
+<P><B>Note</B>* Wrappers for OleCommandTarget-&gt;Exec, using various OLECMDID_xxx IDs. Has the same effect as using IE commands.</P>
+<P align="center"><a href="#Index">Index</a></P>
+
+<H2><a name="Related Document">Related Document</a></H2>
+<p><a href="http://msdn.microsoft.com/library/default.asp?url=/workshop/browser/hosting/wbcustomization.asp?frame=true">WebBrowser Customization</a>
+<br><a href="http://msdn.microsoft.com/library/default.asp?url=/workshop/browser/webbrowser/reflist_cpp.asp?frame=true">Webbrowser Control Reference for C/C++ Developers</a>
+<br><a href="http://msdn.microsoft.com/library/default.asp?url=/workshop/browser/hosting/reference/reference.asp?frame=true">Advanced Hosting Reference</a>
+<br><a href="http://support.microsoft.com/default.aspx?scid=kb;en-us;279497">How To Get Protocol Headers in a Pluggable Protocol Handler</a>
+<br><a href="http://support.microsoft.com/default.aspx?scid=kb;en-us;280512">SAMPLE: ATLCPImplMT encapsulates ATL event firing across COM apartments</a>
+<br><a href="http://support.microsoft.com/default.aspx?scid=kb;en-us;261003">How to handle script errors as a WebBrowser control host</a>
+<br><a href="http://msdn.microsoft.com/library/default.asp?url=/workshop/networking/pluggable/overview/overview.asp?frame=true">About Asynchronous Pluggable Protocols</a>
+<br><a href="http://msdn.microsoft.com/library/default.asp?url=/workshop/networking/moniker/reference/ifaces/urlmon_ref_ifaces_entry.asp">URL
+Monikers Interfaces</a>
+<br><a href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/APISP/html/sp_urlmon1_uxvw.asp?frame=true">HTML
+Control API Interfaces</a>
+<br><a href="http://msdn.microsoft.com/library/default.asp?url=/workshop/browser/ext/overview/downloadmgr.asp?frame=true">Implementing a Custom Download Manager</a>
+<br><a href="http://msdn.microsoft.com/library/default.asp?url=/workshop/browser/mshtml/reference/reference.asp?frame=true">MSHTML Reference</a>
+<br><a href="http://msdn.microsoft.com/library/default.asp?url=/workshop/security/szone/reference/ifaces/iinternetsecuritymanager/iinternetsecuritymanager.asp">IInternetSecurityManager</a>
+<br><a href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/vccore/html/vcconProgrammingWithATLCRuntimeCode.asp?frame=true">Programming with ATL and C Run-Time Code</a></p>
+
+<H2><a name="History">History</a></H2>
+
+<UL>
+<LI>20<SUP>th</SUP> Sep, 2006 - Version (1.2.1.6) posted. 
+<UL>
+<LI>New methods: 
+<UL>
+<LI><CODE>SetupWindowsHook</CODE> 
+<LI><CODE>HookProcNCode</CODE> 
+<LI><CODE>FindAndHighlightAllTextFrames</CODE> 
+<LI><CODE>SetupCustomAutoComplete</CODE> 
+<LI><CODE>CustomAutoCompleteAddString</CODE> 
+<LI><CODE>CustomAutoCompleteEnable</CODE> 
+<LI><CODE>QueryIERegistryOption</CODE> 
+<LI><CODE>SetIERegistryOption</CODE> 
+<LI><CODE>DecodeMime</CODE> 
+<LI><CODE>DeleteIEFiles</CODE> 
+</LI></UL>
+<LI>New events: 
+<UL>
+<LI><CODE>OnWBKeyDown</CODE>
+<LI><CODE>OnWBKeyUp</CODE> 
+<LI><CODE>DocHostShowMessage</CODE> 
+<LI><CODE>FindAnyTextMatchCallback</CODE> 
+<LI><CODE>OnShowScriptError</CODE> 
+</LI></UL>
+<LI>New interfaces: 
+<UL>
+<LI><CODE>IHTMLOMWindowServices</code> - IE6 XP sp2 
+</LI></UL>
+<LI>Bug fixs: 
+<UL>
+<LI><code>DocHostUIHandler::TranslateAccelerator.</code>
+<LI>Last parameter of <code>FindAndHighlightAllText</code> method now returns number of matches found rather than returning a
+  Boolean value indicating success or failure
+<LI>Added a Boolean optional parameter to <code>AddBrowser</code> method to allow the client to open WBs in the background. By default, Browsers are opened in the background.
+<LI>Incorporated <code>IDownloadManager</code> interface within idl. No need for <Code>downloadmgr.h</code>
+<LI><code>LoadHTMLFromString</code>, Fixed a bug that caused the base URL to be set to about:blank.
+Added a new parameter <code>sBaseUrl</code> to enable client to set base URL
+</LI></UL>
+<LI>Removed: 
+<UL>
+<LI><CODE>ShowMessage</code> event
+<LI><CODE>OnAcceletorKeys</code> event
+<LI><CODE>WB_SCRIPT_ERROR_ACTION</code> enum
+<LI><CODE>WB_ACCELETOR_KEYS_ACTION</code> enum
+<LI><CODE>AcceletorKeysAction</code> property
+<LI><CODE>ScriptErrorAction</code> property
+</LI></UL>
+<UL>
+<LI><CODE>Terminate</CODE> method
+</LI></UL>
+</LI></UL>
+</LI></UL>
+
+<UL>
+<LI>08<SUP>th</SUP> May, 2006 - Version (1.2.1.5) posted.
+<UL>
+<LI>New Events:
+<UL>
+<LI><CODE>WBEvaluateNewWindow</CODE>
+</LI></UL>
+</LI></UL>
+</LI></UL>
+
+<UL>
+<LI>17<SUP>th</SUP> Apr, 2006 - Version (1.2.1.4) posted.
+<UL>
+<LI>Bug Fixs:
+<UL>
+<LI><CODE>IWB::GetIEServerHwnd</CODE>
+<LI><CODE>IWB::GetShellDocObjHwnd</CODE>
+<LI><CODE>IWB::GetShellEmbedding</CODE>
+<LI><CODE>WBDocHostUIHandler::TranslateAccelerator</CODE>
+</LI></UL>
+<UL>
+<LI>Added VBDemoEx to download page
+</LI></UL>
+</LI></UL>
+</LI></UL>
+
+<UL>
+<LI>15<SUP>th</SUP> Mar, 2006 - Version (1.2.1.3) posted. 
+<UL>
+<LI>New Methods:
+<UL>
+<LI><CODE>OrganizeFavorites</CODE> (Thank you dosuryu)
+<LI><code>ViewIEOptions</code></LI>
+</UL>
+<LI>Bug Fixs: 
+<UL>
+<LI>Replaced SecurityManagerProcessUrlAction event with WBProcessUrlAction
+<LI>New event has two extra parameters PUAF_Flag (one of PUAF enum) and bHandled.
+<LI>By default, bHandled is false, if setting lpUrlPolicy parameter, you also need to set the bHandled to true. lpUrlPolicy parameter is declared as long variable that can be set by client one of URL Policy Flags. (Thank you ZackJ)
+<LI>WBEventDispatch::WBHTMLDocAsStream method. (Thank you dosuryu)
+<LI>Find method.
+<LI>SaveAs method.
+<LI>Moved all string literals to res file.
+</LI></UL>
+</LI></UL>
+</LI></UL>
+
+<UL>
+<LI>20<SUP>th</SUP> Feb, 2006 - Version (1.2.1.2) posted. 
+<UL>
+<LI>New properties: 
+<UL>
+<LI><CODE>SourceOnDocComplete</CODE>
+</LI></UL>
+<LI>New Events: 
+<UL>
+<LI><CODE>DocumentCompleteWBEx</CODE>
+</LI></UL>
+<LI>Bug Fixs:
+<UL>
+<LI>Disabeled <code>Terminate</code> method. Calling this method has no effect.
+<LI>Fixed <code>WBDocHostShowUI::ShowMessage</code> to use <code>MSHTML</code> provided title.
+<LI>Modified <code>LoadHtmlFromString</code> to be able to load buffers larger than 500 KB.
+<LI>Added an optional parameter <code>bUseIEDefault</code> to <code>RegisterAsDropTarget</code> property.
+<UL>
+<LI><code>bUseIEDefault</code> default value is False
+<LI>Set <code>bUseIEDefault</code> to true to use default IE drag drop behaviour
+</LI></UL>
+</LI></UL>
+<LI>Added a parameter <code>lWBDropFormat</code> to <code>WBDrop</code> event. The value can be one of
+<UL>
+<LI>WB_CFHTML = 0 (includes HTML tags)
+<LI>WB_CFTEXT = 1
+<LI>WB_CFSINGLEFILE = 2
+<LI>WB_CFRTF = 3 (Includes RTF tags)
+<LI>WB_CFERROR = 4
+</LI></UL>
+</LI></UL>
+</LI></UL>
+
+<UL>
+<LI>18<SUP>th</SUP> Jan, 2006 - Version (1.2.1.1) posted. 
+<UL>
+<LI>New properties: 
+<UL>
+<LI><CODE>WBPageTextSize</CODE>
+</LI></UL>
+<LI>New methods: 
+<UL>
+<LI><CODE>SaveAsBitmap</CODE> 
+<LI><CODE>DrawWBThumbnailOnWnd</CODE> 
+<LI><CODE>LoadHtmlFromString</CODE> 
+<LI><CODE>DisplayCertificateDialog</CODE> 
+<LI><CODE>ucResetFieldsToDefault</CODE> 
+<LI><CODE>SubclassWnd</CODE> 
+<LI><CODE>UnSubclassWnd</CODE> 
+<LI><CODE>AddMessage</CODE> 
+<LI><CODE>SetupShellAutoComplete</CODE> 
+<LI><CODE>WBPostData</CODE>
+</LI></UL>
+<LI>New events: 
+<UL>
+<LI><CODE>OnGetOptionKeyPath</CODE> 
+<LI><CODE>OnGetOverrideKeyPath</CODE> 
+<LI><CODE>OnWBDragEnter</CODE> 
+<LI><CODE>OnWBDragOver</CODE> 
+<LI><CODE>OnWBDrop</CODE> 
+<LI><CODE>OnWBDrop2</CODE> 
+<LI><CODE>OnWBDragLeave</CODE> 
+<LI><CODE>OnWMMessage</CODE> 
+<LI><CODE>OnPostDataAvailable</CODE> 
+<LI><CODE>OnPostOnProgress</CODE> 
+<LI><CODE>OnPostError</CODE> 
+<LI><CODE>OnPostEnd</CODE> 
+<LI><CODE>OnPostResponse</CODE>
+</LI></UL>
+<LI>New interfaces: 
+<UL>
+<LI><CODE>IDropTarget</CODE> 
+<LI><CODE>IDocHostUIHandler2</CODE> 
+<LI><CODE>IStream</CODE>
+</LI></UL>
+<LI>Bug fixs: 
+<UL>
+<LI>Changed default value of <CODE>m_StartupURL</CODE> to L"" (Thank you dosuryu). 
+<LI>Changed the failed return value of <CODE>WBHttpSecurity::OnSecurityProblem</CODE> method from <CODE>RPC_E_RETRY</CODE> to <CODE>S_FALSE</CODE> (Thank you folklayer). 
+<LI>Added _T to allow UNICODE build (Thank you Robert). 
+<LI>Modified <CODE>Terminate</CODE> and <CODE>RemoveBrowser</CODE> methods so as not to display any messages in regard to ref count and not to generate any COM errors if ref count of <CODE>IWB</CODE> instance is greater than one. 
+<LI>Overrode <CODE>IOleControlImpl::GetControlInfo</CODE> and added default handling of accelerator keys to <CODE>ProcessWBAccelKeys</CODE> method based on KB article 187644. 
+<LI>Removed <CODE>optional</CODE> keyword from <I>vbMHWB.idl</I> file. 
+<LI>Handled <CODE>WM_SETFOCUS</CODE> message to pass the focus from the control to the first web browser while tabbing through controls on a dialog/form.
+</LI></UL>
+</LI></UL>
+</LI></UL>
+
+<UL>
+<LI>03<SUP>th</SUP> Sep, 2005 - Version (1.1.1.1) posted.
+<UL>
+<LI>Added a number of new events and functionalities:
+<UL>
+<LI><code>OnAuthentication</code>
+<LI><code>OnHTTPSecurityProblem</code>
+<LI><code>ProtocolHandlerOnBeginTransaction</code>
+<LI><code>ProtocolHandlerOnResponse</code>
+<LI><code>NewWindow3</code>  (WinXP sp2 specific)
+</LI></UL>
+<LI><code>IOleCommandTarget::Exec</code> method causing certain pages to crash.
+<LI>Corrected a problem with the internal download control. Downloading attachements from Hotmail, Yahoo, ... was not being intercepted due to the use of <code>Content_Disposition</code> header.
+<LI>Added dosuryu solution to <code>CvbWB::ProcessWBAccelKeys</code> method to process &lt;SELECT> tags properly.
+<LI>Simplified the VBDemo Project.
+<LI>Added a MFCDemo project.
+<LI>Removed two events and added their functionalty to <code>FileDownloadEx</code> event:
+<UL>
+<LI><code>OnFileDLRedirect</code>
+<LI><code>OnFileDLStartDownload</code>
+</LI></UL>
+</LI></UL>
+</LI></UL>
+
+<UL>
+<LI>17<SUP>th</SUP> June, 2005 - Version (1.0.1.1) posted.
+<UL>
+<LI>Fixed two bugs regarding BSTR handling and memory leak during downloads initiated by user.
+<LI>Fixed minor bugs in the demo project.
+</LI></UL>
+</LI></UL>
+
+<UL>
+<LI>13<SUP>th</SUP> May, 2005 - Initial version (1.0.0.1) posted.
+</LI></UL>
+
+<P align="center"><a href="#Index">Index</a></P>
+
+<H2><a name="Downloads">Downloads</a></h2>
+<ul>
+<LI><A href="http://sourceforge.net/project/showfiles.php?group_id=137627">All packages</A> 
+<LI><A href="http://sourceforge.net/project/showfiles.php?group_id=137627&package_id=151143&release_id=326449">vbMHWB</A>
+<LI><A href="http://sourceforge.net/project/showfiles.php?group_id=137627&package_id=163969&release_id=357581">VBDemoEX</A>
+<LI><A href="http://sourceforge.net/project/showfiles.php?group_id=137627&package_id=152032&release_id=357579">VBDemo</A>
+<LI><A href="http://sourceforge.net/project/showfiles.php?group_id=137627&package_id=152031">MFCDemo</A>
+</LI></ul>
+
+<H2><a name="csharp">C# Version</a></h2>
+<p>A limited functionality C# version of this control is available. These limitations are due to issues with COM threading mechanism and interop.</p>
+<ul>
+<LI><A href="http://www.planet-source-code.com/vb/scripts/ShowCode.asp?txtCodeId=4737&lngWId=10">C# Version</A>
+</ul>
+
+<H2><a name="Contact">Contact</a></H2>
+<p><a href="mailto:mehr13@hotmail.com">mehr13@hotmail.com</a></p>
+
+</body>
+
+</html>

@@ -1,0 +1,34 @@
+HKCR
+{
+	VbMHWB.vbWB.1 = s 'vbWB Class'
+	{
+		CLSID = s '{20247C83-3429-47B1-817F-C99F29D2BF3A}'
+	}
+	VbMHWB.vbWB = s 'vbWB Class'
+	{
+		CLSID = s '{20247C83-3429-47B1-817F-C99F29D2BF3A}'
+		CurVer = s 'VbMHWB.vbWB.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove {20247C83-3429-47B1-817F-C99F29D2BF3A} = s 'vbWB Class'
+		{
+			ProgID = s 'VbMHWB.vbWB.1'
+			VersionIndependentProgID = s 'VbMHWB.vbWB'
+			ForceRemove 'Programmable'
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Apartment'
+			}
+			ForceRemove 'Control'
+			ForceRemove 'Insertable'
+			ForceRemove 'ToolboxBitmap32' = s '%MODULE%, 101'
+			'MiscStatus' = s '0'
+			{
+			    '1' = s '131473'
+			}
+			'TypeLib' = s '{33658027-1004-4E1E-8D35-C9146DF87919}'
+			'Version' = s '1.0'
+		}
+	}
+}

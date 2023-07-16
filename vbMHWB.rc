@@ -1,0 +1,220 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""winres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "1 TYPELIB ""vbMHWB.tlb""\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,2,1,6
+ PRODUCTVERSION 1,2,1,6
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080004b0"
+        BEGIN
+            VALUE "Comments", "Contact mehr13@hotmail.com \0"
+            VALUE "CompanyName", "MH\0"
+            VALUE "FileDescription", "vbMHWB DLL\0"
+            VALUE "FileVersion", "1, 2, 1, 6\0"
+            VALUE "InternalName", "vbMHWB\0"
+            VALUE "LegalCopyright", "Copyright 2004\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OLESelfRegister", "\0"
+            VALUE "OriginalFilename", "vbMHWB.DLL\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "vbMHWB\0"
+            VALUE "ProductVersion", "1, 2, 1, 6\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x800, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_PROJNAME            "vbMHWB"
+    IDS_VBURLCOMPONENTS_DESC "vbUrlComponents Class"
+    IDS_HWND                "HWND: "
+    IDS_THREADID            "Thread ID: "
+    IDS_INST_HANDLE         "Instance Handle: "
+    IDS_MODULE_PATH         "Module Path: "
+    IDS_CTL_DESIGNMODE      "Control - Design Mode"
+    IDS_CUR_VERSION         " v1.2.1.6 "
+    IDS_WB_NOT_FOUND        "Unable to find browser in collection."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_WBHOST_NOT_FOUND    "Unable to find host or browser object."
+    IDS_EXECWB_FAILED       "ExecWB failed."
+    IDS_QSWB_FAILED         "QueryStatusWB failed."
+    IDS_NO_DOCDISPATCH      "Unable to retreive document dispatch object."
+    IDS_NO_DOCOBJECT        "Unable to retreive document object."
+    IDS_NO_ACTIVEELEM       "Unable to retreive ActiveElementObject."
+    IDS_WB_CREATE_FAILED    "Failed to create new webbrowser control."
+    IDS_HOST_CREATE_FAILED  "Failed to create new Hosting class."
+    IDS_ACCEL_PROP_ERR      "Value must be 0, display none or 1, display all or 2, use event."
+    IDS_PROP_VALUE_ERR      "Value must be 0, 1, or 2."
+    IDS_NO_BROWSEROBJ       "Unable to retreive browser object."
+    IDS_HTTPS_PROT_REGISTERED "HTTPS protocol has already been registered."
+    IDS_HTTP_PROT_REGISTERED "HTTP protocol has already been registered."
+    IDS_NO_DLMANAGER        "Unable to create DownloadManager."
+    IDS_NO_URLMONIKOR       "Unable to create URLMonikor."
+    IDS_NO_ASYNCBINDCTX     "Unable to create AsyncBindCtx."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_BINDTOSTORAGE_FAILED "BindToStorage Failed."
+    IDS_SSLCMD_FAILED       "Unable to Exec SHDVID_SSLSTATUS Command."
+    IDS_CONTENTLENZERO_ERR  "Content length must be bigger than zero."
+    IDS_MEMALLOCATION_FAILED "Unable to allocate memory."
+    IDS_NO_IVIEWOBJ         "Unable to retreive IViewObject interface."
+    IDS_DRAWOP_ABORTED      "Draw operation aborted."
+    IDS_NO_ACTIVEDOC        "Unable to retreive ActiveDocument."
+    IDS_NO_FONTSIZE         "Unable to retreive the font size."
+    IDS_NO_FONTSIZE_SET     "Unable to set the font size."
+    IDS_NO_HWND_ERR         "hwndWnd must point to a window."
+    IDS_NO_SUBCLASS_ERR     "Unable to subclass target window."
+    IDS_NO_HWND_SUBCLASSED  "Unable to find window in the collection of subclassed windows."
+    IDS_NO_EDITHWND         "Unable to retreive EDIT HWND."
+    IDS_SHLWAPI_LOAD_FAILED "Unable to load SHLWAPI.DLL"
+    IDS_SHAUTOCOMPLETE_FAILED "Unable to load SHAutoComplete function."
+    IDS_SHAUTOCOMPLET_CALLFAILED "Call to SHAutoComplete function failed."
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_UNABLE_TOSAVE_BMP   "Unable to save the bitmap file."
+    IDS_UNABLE_TOCREATE_CLASS "Unable to create class."
+    IDS_UNABLE_TOINIT_CLASS "Unable to initialize class."
+    IDS_ERROR_NUMBER        " Error Number = "
+    IDS_UNABLETO_REMOVEWB   "Unable to remove browser."
+    IDS_FAILEDTOINSTALLHOOK "Failed to install windows hook."
+    IDS_FAILEDTOCREATEAC    "CAutoCompleter unable to create new instance of object."
+    IDS_ACBINDINGFAILED     "CAutoCompleter binding failed."
+    IDS_ACLISTEMPTY         "CAutoCompleter list is empty."
+    IDS_UNABLETOFINDAC      "Unable to find autocomplete instance."
+    IDS_EMPTYACARRAY        "AutoCompleters array is empty."
+    IDS_AUTHORCONTACTINFO   "Contact: mehr13@hotmail.com"
+    IDS_AUTHORNAME          "Author: M.H."
+    IDS_HOMEPAGE            "HomePage: http://vbmhwb.sourceforge.net/"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (Canada) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENC)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_CAN
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_VBWB                BITMAP  DISCARDABLE     "vbwb.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// HTML
+//
+
+IDH_VBWB                HTML    DISCARDABLE     "vbWBUI.htm"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// REGISTRY
+//
+
+IDR_VBWB                REGISTRY DISCARDABLE    "vbWB.rgs"
+#endif    // English (Canada) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+1 TYPELIB "vbMHWB.tlb"
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
