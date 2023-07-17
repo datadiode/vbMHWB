@@ -3484,7 +3484,8 @@ STDMETHODIMP CvbWB::UnSubclassWnd(long hwndWnd)
 	if( (hwnd) && (::IsWindow(hwnd)) )
 	{
 		int isize = m_Subclassed.GetSize();
-		for(int i = 0; i < isize; i++)
+		int i;
+		for(i = 0; i < isize; i++)
 		{
 			if( (m_Subclassed[i]) && (m_Subclassed[i]->IsSubClassedByThis(hwnd)) )
 				break;
@@ -3519,7 +3520,8 @@ STDMETHODIMP CvbWB::AddMessage(long hwndWnd, long lMsg)
 	if( (hwnd) && (::IsWindow(hwnd)) )
 	{
 		int isize = m_Subclassed.GetSize();
-		for(int i = 0; i < isize; i++)
+		int i;
+		for(i = 0; i < isize; i++)
 		{
 			if( (m_Subclassed[i]) && (m_Subclassed[i]->IsSubClassedByThis(hwnd)) )
 				break;
