@@ -15,6 +15,7 @@
 typedef PassthroughAPP::CMetaFactory<PassthroughAPP::CComClassFactoryProtocol,
 	WBPassthru> MetaFactory;
 
+#ifndef _WIN32_WCE
 ////////////////////////////////////////////////
 //Windows hooks structure, vars and callbacks
 typedef struct WBHOOKDATA 
@@ -71,6 +72,7 @@ static int nCode_SysMsgProc; //(SysMsgProc)
 #define UWM_FORGROUNDIDLE_HOOKPROC_MSG _T("UWM_FORGROUNDIDLE-{88E3AE4F-103F-4549-B24F-8964C6335706}")
 #define UWM_CALLWNDRET_HOOKPROC_MSG _T("UWM_CALLWNDRET-{6C5FD4ED-B340-4563-9F74-908F8E292635}")
 #define UWM_SYSMSG_HOOKPROC_MSG _T("UWM_SYSMSG-{13480F7E-5357-4eb3-979C-94CB6BE2B106}")
+#endif
 
 //////////////////////////////////////////////////////////
 
@@ -212,12 +214,8 @@ HRESULT StreamStringCat (LPSTREAM lpStream, LPCTSTR lpString);
 HRESULT StreamStringRead (LPSTREAM lpStream, LPTSTR lpszReceiver, ULONG* lpulSizeReceiver);
 HRESULT StreamStringRead2 (LPSTREAM lpStream, LPTSTR lpszReceiver, ULONG ulSizeReceiver);
 
-LPCTSTR DecodeHtml(LPCTSTR s_In);
+BSTR DecodeHtml(LPCTSTR s_In);
 
-HRESULT Delete_DesktopRunMRU(void);
-HRESULT Delete_DesktopRecentDocsHistory(void);
-
-HRESULT Delete_IEAddressBarTypedURLs(void);
 HRESULT Delete_IEHistory(BOOL bDeleteHistory = TRUE, BOOL bDeleteHistoryIndex = FALSE);
 HRESULT Delete_IECache(BOOL bDeleteCache = TRUE, BOOL bDeleteCacheIndex = FALSE);
 HRESULT Delete_IECookies(BOOL bDeleteCookies = TRUE, BOOL bDeleteCookiesIndex = FALSE);
@@ -225,101 +223,89 @@ HRESULT Delete_IECookies(BOOL bDeleteCookies = TRUE, BOOL bDeleteCookiesIndex = 
 // CvbWB
 /////////////////////////////////////////////////////////////////////////////
 
-STDMETHODIMP CvbWB::InterfaceSupportsErrorInfo(REFIID riid)
-{
-	static const IID* arr[] = 
-	{
-		&IID_IvbWB,
-	};
-	for (int i=0; i<sizeof(arr)/sizeof(arr[0]); i++)
-	{
-		if (InlineIsEqualGUID(*arr[i], riid))
-			return S_OK;
-	}
-	return S_FALSE;
-}
-
 void CvbWB::InitInternalHookStructures()
 {
+#ifndef _WIN32_WCE
 	nCode_CBTProc = 0;
 	nCode_MessageProc = 0;
 	nCode_SysMsgProc = 0;
 	wbhookdata[H_CALLWNDPROC].bHookInstalled = FALSE;
 	wbhookdata[H_CALLWNDPROC].hhook = NULL;
-	wbhookdata[H_CALLWNDPROC].hkprc = (HOOKPROC)CallWndProc;
+	wbhookdata[H_CALLWNDPROC].hkprc = CallWndProc;
 	wbhookdata[H_CALLWNDPROC].hwndTarget = NULL;
 	wbhookdata[H_CALLWNDPROC].nType = WH_CALLWNDPROC;
 	wbhookdata[H_CALLWNDPROC].uiHookMsgID = ::RegisterWindowMessage(UWM_MOUSE_HOOKPROC_MSG);
 
 	wbhookdata[H_CBT].bHookInstalled = FALSE;
 	wbhookdata[H_CBT].hhook = NULL;
-	wbhookdata[H_CBT].hkprc = (HOOKPROC)CBTProc;
+	wbhookdata[H_CBT].hkprc = CBTProc;
 	wbhookdata[H_CBT].hwndTarget = NULL;
 	wbhookdata[H_CBT].nType = WH_CBT;
 	wbhookdata[H_CBT].uiHookMsgID = ::RegisterWindowMessage(UWM_CBT_HOOKPROC_MSG);
 
 	wbhookdata[H_GETMESSAGE].bHookInstalled = FALSE;
 	wbhookdata[H_GETMESSAGE].hhook = NULL;
-	wbhookdata[H_GETMESSAGE].hkprc = (HOOKPROC)GetMsgProc;
+	wbhookdata[H_GETMESSAGE].hkprc = GetMsgProc;
 	wbhookdata[H_GETMESSAGE].hwndTarget = NULL;
 	wbhookdata[H_GETMESSAGE].nType = WH_GETMESSAGE;
 	wbhookdata[H_GETMESSAGE].uiHookMsgID = ::RegisterWindowMessage(UWM_GETMSG_HOOKPROC_MSG);
 
 	wbhookdata[H_KEYBOARD].bHookInstalled = FALSE;
 	wbhookdata[H_KEYBOARD].hhook = NULL;
-	wbhookdata[H_KEYBOARD].hkprc = (HOOKPROC)KeyboardProc;
+	wbhookdata[H_KEYBOARD].hkprc = KeyboardProc;
 	wbhookdata[H_KEYBOARD].hwndTarget = NULL;
 	wbhookdata[H_KEYBOARD].nType = WH_KEYBOARD;
 	wbhookdata[H_KEYBOARD].uiHookMsgID = ::RegisterWindowMessage(UWM_KEYBOARD_HOOKPROC_MSG);
 
 	wbhookdata[H_MOUSE].bHookInstalled = FALSE;
 	wbhookdata[H_MOUSE].hhook = NULL;
-	wbhookdata[H_MOUSE].hkprc = (HOOKPROC)MouseProc;
+	wbhookdata[H_MOUSE].hkprc = MouseProc;
 	wbhookdata[H_MOUSE].hwndTarget = NULL;
 	wbhookdata[H_MOUSE].nType = WH_MOUSE;
 	wbhookdata[H_MOUSE].uiHookMsgID = ::RegisterWindowMessage(UWM_MOUSE_HOOKPROC_MSG);
 
 	wbhookdata[H_MSGFILTER].bHookInstalled = FALSE;
 	wbhookdata[H_MSGFILTER].hhook = NULL;
-	wbhookdata[H_MSGFILTER].hkprc = (HOOKPROC)MessageProc;
+	wbhookdata[H_MSGFILTER].hkprc = MessageProc;
 	wbhookdata[H_MSGFILTER].hwndTarget = NULL;
 	wbhookdata[H_MSGFILTER].nType = WH_MSGFILTER;
 	wbhookdata[H_MSGFILTER].uiHookMsgID = ::RegisterWindowMessage(UWM_MESSAGE_HOOKPROC_MSG);
 
 	wbhookdata[H_KEYBOARD_LL].bHookInstalled = FALSE;
 	wbhookdata[H_KEYBOARD_LL].hhook = NULL;
-	wbhookdata[H_KEYBOARD_LL].hkprc = (HOOKPROC)LowLevelKeyboardProc;
+	wbhookdata[H_KEYBOARD_LL].hkprc = LowLevelKeyboardProc;
 	wbhookdata[H_KEYBOARD_LL].hwndTarget = NULL;
 	wbhookdata[H_KEYBOARD_LL].nType = WH_KEYBOARD_LL;
 	wbhookdata[H_KEYBOARD_LL].uiHookMsgID = ::RegisterWindowMessage(UWM_LOWLEVELKEYBOARD_HOOKPROC_MSG);
 
 	wbhookdata[H_MOUSE_LL].bHookInstalled = FALSE;
 	wbhookdata[H_MOUSE_LL].hhook = NULL;
-	wbhookdata[H_MOUSE_LL].hkprc = (HOOKPROC)LowLevelMouseProc;
+	wbhookdata[H_MOUSE_LL].hkprc = LowLevelMouseProc;
 	wbhookdata[H_MOUSE_LL].hwndTarget = NULL;
 	wbhookdata[H_MOUSE_LL].nType = WH_MOUSE_LL;
 	wbhookdata[H_MOUSE_LL].uiHookMsgID = ::RegisterWindowMessage(UWM_LOWLEVELMOUSE_HOOKPROC_MSG);
 
 	wbhookdata[H_FOREGROUNDIDLE].bHookInstalled = FALSE;
 	wbhookdata[H_FOREGROUNDIDLE].hhook = NULL;
-	wbhookdata[H_FOREGROUNDIDLE].hkprc = (HOOKPROC)ForegroundIdleProc;
+	wbhookdata[H_FOREGROUNDIDLE].hkprc = ForegroundIdleProc;
 	wbhookdata[H_FOREGROUNDIDLE].hwndTarget = NULL;
 	wbhookdata[H_FOREGROUNDIDLE].nType = WH_FOREGROUNDIDLE;
 	wbhookdata[H_FOREGROUNDIDLE].uiHookMsgID = ::RegisterWindowMessage(UWM_FORGROUNDIDLE_HOOKPROC_MSG);
 
 	wbhookdata[H_CALLWNDPROCRET].bHookInstalled = FALSE;
 	wbhookdata[H_CALLWNDPROCRET].hhook = NULL;
-	wbhookdata[H_CALLWNDPROCRET].hkprc = (HOOKPROC)CallWndRetProc;
+	wbhookdata[H_CALLWNDPROCRET].hkprc = CallWndRetProc;
 	wbhookdata[H_CALLWNDPROCRET].hwndTarget = NULL;
 	wbhookdata[H_CALLWNDPROCRET].nType = WH_CALLWNDPROCRET;
 	wbhookdata[H_CALLWNDPROCRET].uiHookMsgID = ::RegisterWindowMessage(UWM_CALLWNDRET_HOOKPROC_MSG);
 
 	wbhookdata[H_SYSMSGFILTER].bHookInstalled = FALSE;
 	wbhookdata[H_SYSMSGFILTER].hhook = NULL;
-	wbhookdata[H_SYSMSGFILTER].hkprc = (HOOKPROC)SysMsgProc;
+	wbhookdata[H_SYSMSGFILTER].hkprc = SysMsgProc;
 	wbhookdata[H_SYSMSGFILTER].hwndTarget = NULL;
 	wbhookdata[H_SYSMSGFILTER].nType = WH_SYSMSGFILTER;
 	wbhookdata[H_SYSMSGFILTER].uiHookMsgID = ::RegisterWindowMessage(UWM_SYSMSG_HOOKPROC_MSG);
+#endif
 }
 
 ////////////////////////////////////
@@ -403,7 +389,7 @@ CvbWB::~CvbWB()
 			gCtrlInstances.RemoveAt(i);
 		}
 	}
-
+#ifndef _WIN32_WCE
 	//Unhook?
 	if(wbhookdata[H_CALLWNDPROC].hhook)
 		UnhookWindowsHookEx(wbhookdata[H_CALLWNDPROC].hhook);
@@ -431,7 +417,7 @@ CvbWB::~CvbWB()
 	nCode_CBTProc = 0;
 	nCode_MessageProc = 0;
 	nCode_SysMsgProc = 0;
-
+#endif
 	m_wbcurid = 0;
 	/* Clean up */
 	int iSize = m_arrWB.GetSize();
@@ -465,7 +451,7 @@ CvbWB::~CvbWB()
 		}
 		m_arrWB.RemoveAll();
 	}
-
+#ifndef _WIN32_WCE
 	iSize = m_AutoCompleters.GetSize();
 	if(iSize > 0)
 	{
@@ -477,7 +463,7 @@ CvbWB::~CvbWB()
 		}
 		m_AutoCompleters.RemoveAll();
 	}
-
+#endif
 }
 
 //Called from OnStopBinding of WBBSCBFileDL class
@@ -515,6 +501,7 @@ HRESULT CvbWB::OnDraw(ATL_DRAWINFO& di)
 	//Only display info if in design mode else just a plain window with hwnd + ,...
 	RECT& rc = *(RECT*)di.prcBounds;
 	Rectangle(di.hdcDraw, rc.left, rc.top, rc.right, rc.bottom);
+#ifndef _WIN32_WCE
 	if (InIDE() == true)
 	{
 		//SetTextAlign(di.hdcDraw, TA_CENTER|TA_BASELINE);
@@ -577,7 +564,7 @@ HRESULT CvbWB::OnDraw(ATL_DRAWINFO& di)
 		MoveToEx(di.hdcDraw, x, y, (LPPOINT) NULL);
 		TextOut(di.hdcDraw, x, y, buff, buff.GetBufferTextLen());
 	}
-
+#endif
 	return S_OK;
 }
 
@@ -3273,7 +3260,7 @@ if(iehwnd)
 
 				//If an error occurs and the selected object is not a region, the return value is NULL. Otherwise, it is HGDI_ERROR
 				HBITMAP hBitmapOld = (HBITMAP)SelectObject(hdcCompatible, hBitmap);
-				if( (hBitmap == NULL) || (hBitmap == HGDI_ERROR) ) goto ReturnError;
+				if(hBitmapOld == NULL) goto ReturnError;
 //Taken out to improve speed
 //				//OLE_COLOR clrBackground = COLOR_WINDOW;
 //				HBRUSH hbrBack = CreateSolidBrush(GetSysColor(COLOR_WINDOW));
@@ -3544,6 +3531,7 @@ STDMETHODIMP CvbWB::AddMessage(long hwndWnd, long lMsg)
 
 STDMETHODIMP CvbWB::SetupShellAutoComplete(long hwndTarget, VARIANT_BOOL IsTargetComboBox, long lFlags)
 {
+#ifndef _WIN32_WCE
 	if(hwndTarget <= 0)
 	{
 		m_StrErr_Tmp = (UINT)IDS_NO_HWND_ERR;
@@ -3557,6 +3545,9 @@ STDMETHODIMP CvbWB::SetupShellAutoComplete(long hwndTarget, VARIANT_BOOL IsTarge
 		m_StrErr_Tmp = (UINT)IDS_SHAUTOCOMPLET_CALLFAILED;
 		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
 	}
+#else
+	return S_OK;
+#endif
 }
 
 STDMETHODIMP CvbWB::SaveAsBitmap(short wbUID, BSTR BitmapName)
@@ -3929,6 +3920,7 @@ BOOL CvbWB::RemoveHostFromArray(short uHostId)
 
 STDMETHODIMP CvbWB::HookProcNCode(WINDOWSHOOK_TYPES lHookType, long *nCode)
 {
+#ifndef _WIN32_WCE
 	if(lHookType == WHT_CBT)
 	{
 		*nCode = (long)nCode_CBTProc;
@@ -3942,14 +3934,16 @@ STDMETHODIMP CvbWB::HookProcNCode(WINDOWSHOOK_TYPES lHookType, long *nCode)
 		*nCode = (long)nCode_SysMsgProc;
 	}
 	else
+#endif
 		*nCode = -1;
 	return S_OK;
 }
 
 STDMETHODIMP CvbWB::SetupWindowsHook(WINDOWSHOOK_TYPES lHookType, long hwndTargetWnd, VARIANT_BOOL bStart, long *lUWMHookMsgID)
 {
+#ifndef _WIN32_WCE	
 	BOOL bInstall = VARIANTBOOLTOBOOL(bStart);
-	
+
 	if( (bInstall == TRUE) && (wbhookdata[lHookType].bHookInstalled == FALSE) )
 	{
 		if(hwndTargetWnd == 0)
@@ -3981,12 +3975,13 @@ STDMETHODIMP CvbWB::SetupWindowsHook(WINDOWSHOOK_TYPES lHookType, long hwndTarge
 		wbhookdata[lHookType].bHookInstalled = bInstall;
 		wbhookdata[lHookType].hwndTarget = NULL;
 	}
-
+#endif
 	return S_OK;
 }
 
 STDMETHODIMP CvbWB::SetupCustomAutoComplete(long hwndTarget,VARIANT_BOOL IsTargetComboBox , long lCustomAutoCompleteFlags, VARIANT * varStringArray)
 {
+#ifndef _WIN32_WCE
 	if( varStringArray->vt != (VT_ARRAY | VT_BSTR) )
 	{
 		return AtlReportError(CLSID_vbWB, _T("varStringArray parameter must be a valid string array") ,IID_IvbWB,DISP_E_EXCEPTION);
@@ -4057,12 +4052,13 @@ STDMETHODIMP CvbWB::SetupCustomAutoComplete(long hwndTarget,VARIANT_BOOL IsTarge
 		m_StrErr_Tmp = (UINT)IDS_ACLISTEMPTY;
 		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
 	}
-
+#endif
 	return S_OK;
 }
 
 STDMETHODIMP CvbWB::CustomAutoCompleteAddString(long hwndTarget,VARIANT_BOOL IsTargetComboBox , BSTR strItem)
 {
+#ifndef _WIN32_WCE
 	BOOL iscombo = VARIANTBOOLTOBOOL(IsTargetComboBox);
 	HWND hwnd = (HWND)hwndTarget;
 
@@ -4092,10 +4088,14 @@ STDMETHODIMP CvbWB::CustomAutoCompleteAddString(long hwndTarget,VARIANT_BOOL IsT
 	//Nothing
 	m_StrErr_Tmp = (UINT)IDS_UNABLETOFINDAC;
 	return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+#else
+	return S_OK;
+#endif
 }
 
 STDMETHODIMP CvbWB::CustomAutoCompleteEnable(long hwndTarget, VARIANT_BOOL IsTargetComboBox ,VARIANT_BOOL bEnable)
 {
+#ifndef _WIN32_WCE
 	BOOL iscombo = VARIANTBOOLTOBOOL(IsTargetComboBox);
 	BOOL enable = VARIANTBOOLTOBOOL(bEnable);
 	HWND hwnd = (HWND)hwndTarget;
@@ -4132,6 +4132,9 @@ STDMETHODIMP CvbWB::CustomAutoCompleteEnable(long hwndTarget, VARIANT_BOOL IsTar
 	//Nothing
 	m_StrErr_Tmp = (UINT)IDS_UNABLETOFINDAC;
 	return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+#else
+	return S_OK;
+#endif
 }
 
 //	LPTSTR buf = (LPTSTR)malloc((UINT)(MAX_PATH+1 * sizeof(TCHAR)));
@@ -4319,7 +4322,7 @@ STDMETHODIMP CvbWB::DecodeMime(BSTR strToDecode, BSTR *strDecoded)
 {
 	USES_CONVERSION;
 	ClearBSTRPtr(*strDecoded);
-	*strDecoded = ::SysAllocString(T2BSTR(DecodeHtml(OLE2T(strToDecode))));
+	*strDecoded = DecodeHtml(OLE2T(strToDecode));
 	return S_OK;
 }
 
@@ -4352,6 +4355,7 @@ STDMETHODIMP CvbWB::DeleteIEFiles(DELETE_IE_FILES_FLAGS enumWhichFiles)
 		return AtlReportError(CLSID_vbWB, _T("Unable to Delete IE Files.") ,IID_IvbWB,DISP_E_EXCEPTION);
 }
 
+#ifndef _WIN32_WCE
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //	HOOK CALLBACK IMPLEMENTATION
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4644,6 +4648,7 @@ static LRESULT CALLBACK SysMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
 	}
 	return CallNextHookEx(wbhookdata[H_SYSMSGFILTER].hhook, nCode, wParam, lParam);
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // CSubclassWnd
@@ -4900,9 +4905,11 @@ STDMETHODIMP IWB::StartWB(DWORD UiFlags, DWORD UiDblClk, DWORD DlFlag,
 	
 	//To handle msgs
 	m_pWBDocHostShowUI = new WBDocHostShowUI(this);
-	
+
+#ifndef _WIN32_WCE
 	//NewWindowManager
 	m_pWBNewWindowManager = new WBNewWindowManager(this);
+#endif
 
     // Get client coord
     GetClientRect(m_hwndParent, &rWindowPos);   
@@ -5088,7 +5095,9 @@ void IWB::CleanUp()
 	if(m_pWBAuthenticate) delete m_pWBAuthenticate;
 	if(m_pWBHttpSecurity) delete m_pWBHttpSecurity;
 	if(m_pWBWindowForBindingUI) delete m_pWBWindowForBindingUI;
+#ifndef _WIN32_WCE
 	if(m_pWBNewWindowManager) delete m_pWBNewWindowManager;
+#endif
 
 	m_hwndParent = NULL;
 	m_hwndShellEmbedding = NULL;
@@ -6157,6 +6166,7 @@ STDMETHODIMP WBDropTarget::Drop(
     /* [in] */ POINTL pt,
     /* [out][in] */ DWORD *pdwEffect)
 {
+#ifndef _WIN32_WCE
 	if(m_pHost->m_bAllowDragDrop == false)
 	{
 		*pdwEffect = DROPEFFECT_NONE;
@@ -6436,6 +6446,7 @@ STDMETHODIMP WBDropTarget::Drop(
 
 	//Finish things up
 	*pdwEffect = static_cast<unsigned long>(m_lEffects);
+#endif
 	return S_OK;
 }
 
@@ -7630,6 +7641,7 @@ STDMETHODIMP WBDocHostUIHandler::FilterDataObject(IDataObject* pDO,
 	return S_FALSE;
 }
 
+#ifndef _WIN32_WCE
 ////////////////////////////////////////////////////////////////////////
 //WBDownLoadManager
 ////////////////////////////////////////////////////////////////////////
@@ -7805,6 +7817,7 @@ char *p, documentURL[INTERNET_MAX_URL_L­ENGTH];
 
 
 */
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 //WBServiceProvider
@@ -7842,6 +7855,7 @@ STDMETHODIMP WBServiceProvider::QueryService(REFGUID guidService, REFIID riid, v
 {
 	if( (guidService == SID_SDownloadManager) && (m_pHost->m_useieforfiledl == false) )//&& riid == IID_IDownloadManager)
 	{
+#ifndef _WIN32_WCE
 		CComObject<WBDownLoadManager>* pDownloadMgr;
 		HRESULT hr = CComObject<WBDownLoadManager>::CreateInstance(&pDownloadMgr);
 		if( (SUCCEEDED(hr)) || (pDownloadMgr) )
@@ -7849,6 +7863,7 @@ STDMETHODIMP WBServiceProvider::QueryService(REFGUID guidService, REFIID riid, v
 			pDownloadMgr->InitDownloadManager(m_pHost);
 			return pDownloadMgr->QueryInterface(IID_IDownloadManager, ppv);
 		}
+#endif
 	}
 	else if(guidService == SID_SInternetSecurityManager) //&& riid == IID_IInternetSecurityManager)
 	{
@@ -10679,6 +10694,7 @@ method has been called.
 	return hr;
 }
 
+#ifndef _WIN32_WCE
 //////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////
@@ -10730,6 +10746,7 @@ STDMETHODIMP WBNewWindowManager::EvaluateNewWindow(LPCWSTR pszUrl, LPCWSTR pszNa
 
 	return hr;
 }
+#endif
 
 //////////////////////////////////////////////////////////////
 //CTmpBuffer
@@ -11456,6 +11473,7 @@ PBITMAPINFO CreateBitmapInfoStruct(HWND hwnd, HBITMAP hBmp)
 
 BOOL CreateBMPFile(HWND hwnd, LPTSTR pszFile, PBITMAPINFO pbi, HBITMAP hBMP, HDC hDC)
 {
+#ifndef _WIN32_WCE
 	HANDLE hf;                 // file handle 
     BITMAPFILEHEADER hdr;       // bitmap file-header 
     PBITMAPINFOHEADER pbih;     // bitmap info-header 
@@ -11533,9 +11551,11 @@ BOOL CreateBMPFile(HWND hwnd, LPTSTR pszFile, PBITMAPINFO pbi, HBITMAP hBMP, HDC
 BMPERROR:
 	if(lpBits)
 		GlobalFree((HGLOBAL)lpBits);
+#endif
 	return FALSE;
 }
 
+#ifndef _WIN32_WCE
 HBITMAP CaptureDesktop()
 {
     HWND hWnd = NULL;
@@ -11611,6 +11631,7 @@ HBITMAP CaptureWindow(HWND hWnd, BOOL bClientAreaOnly)
 
     return hBmp;
 }
+#endif
 
 /*Sample usage
 
@@ -11844,7 +11865,7 @@ HRESULT StreamStringRead2 (LPSTREAM lpStream, LPTSTR lpszReceiver, ULONG ulSizeR
 // "%20" --> " "
 // "%FC" --> "ü"
 // "%25" --> "%"     etc....
-LPCTSTR DecodeHtml(LPCTSTR s_In)
+BSTR DecodeHtml(LPCTSTR s_In)
 {
 	UINT len = _tcslen(s_In);
 	CTmpBuffer s_Out(len);
@@ -11896,7 +11917,7 @@ LPCTSTR DecodeHtml(LPCTSTR s_In)
 	}
 
 	s_Out.ReleaseString();
-	return s_Out;
+	return T2BSTR(s_Out);
 }
 
 /*
@@ -11906,15 +11927,15 @@ Delete methods have been taken from article By Marcel Lambert.
 */
 HRESULT Delete_IECookies(BOOL bDeleteCookies, BOOL bDeleteCookiesIndex)
 {
-	TCHAR szUserProfile[MAX_PATH*2]; 
-	TCHAR szFilePath[MAX_PATH*2];
 	HANDLE hCacheEnumHandle  = NULL;
 	LPINTERNET_CACHE_ENTRY_INFO lpCacheEntry = NULL;
 	DWORD  dwSize = 4096; // initial buffer size
-
+#ifndef _WIN32_WCE
 	// Delete index.dat if requested. Be sure that index.dat is not locked.
 	if(bDeleteCookiesIndex)
 	{
+		TCHAR szUserProfile[MAX_PATH * 2];
+		TCHAR szFilePath[MAX_PATH * 2];
 		// Retrieve from environment user profile path.
 		DWORD bufCharCount = ExpandEnvironmentStrings(_T("%userprofile%"), szUserProfile, 
 														 sizeof(szUserProfile)); 
@@ -11925,7 +11946,7 @@ HRESULT Delete_IECookies(BOOL bDeleteCookies, BOOL bDeleteCookiesIndex)
 
 		if(!bDeleteCookies) return S_OK;
 	}
-	
+#endif
 	// Enable initial buffer size for cache entry structure.
 	lpCacheEntry = (LPINTERNET_CACHE_ENTRY_INFO) new char[dwSize];
     lpCacheEntry->dwStructSize = dwSize;
@@ -12024,15 +12045,15 @@ HRESULT Delete_IECookies(BOOL bDeleteCookies, BOOL bDeleteCookiesIndex)
 
 HRESULT Delete_IECache(BOOL bDeleteCache, BOOL bDeleteCacheIndex)
 {
-	TCHAR szUserProfile[MAX_PATH*2]; 
-	TCHAR szFilePath[MAX_PATH*2];
 	HANDLE hCacheEnumHandle  = NULL;
 	LPINTERNET_CACHE_ENTRY_INFO lpCacheEntry = NULL;
 	DWORD  dwSize = 4096; // initial buffer size
-
+#ifndef _WIN32_WCE
 	// Delete index.dat if requested. Be sure that index.dat is not locked.
 	if(bDeleteCacheIndex)
 	{
+		TCHAR szUserProfile[MAX_PATH * 2];
+		TCHAR szFilePath[MAX_PATH * 2];
 		// Retrieve from environment user profile path.
 		ExpandEnvironmentStrings(_T("%userprofile%"), szUserProfile, 
 														 sizeof(szUserProfile)); 
@@ -12043,7 +12064,7 @@ HRESULT Delete_IECache(BOOL bDeleteCache, BOOL bDeleteCacheIndex)
 
 		if(!bDeleteCache) return S_OK;
 	}
-
+#endif
 	// Enable initial buffer size for cache entry structure.
 	lpCacheEntry = (LPINTERNET_CACHE_ENTRY_INFO) new char[dwSize];
     lpCacheEntry->dwStructSize = dwSize;
@@ -12154,14 +12175,14 @@ HRESULT Delete_IECache(BOOL bDeleteCache, BOOL bDeleteCacheIndex)
 
 HRESULT Delete_IEHistory(BOOL bDeleteHistory, BOOL bDeleteHistoryIndex)
 {
-	TCHAR szUserProfile[MAX_PATH*2]; 
-    TCHAR szFilePath[MAX_PATH*2];
 	HRESULT hr;
 	IUrlHistoryStg2* pUrlHistoryStg2 = NULL;
-
+#ifndef _WIN32_WCE
     // Delete index.dat if requested. Be sure that index.dat is not locked. 
 	if(bDeleteHistoryIndex)
 	{
+		TCHAR szUserProfile[MAX_PATH * 2];
+		TCHAR szFilePath[MAX_PATH * 2];
 		// Retrieve from environment user profile path.
 		ExpandEnvironmentStrings(_T("%userprofile%"), szUserProfile, 
 														 sizeof(szUserProfile)); 
@@ -12171,7 +12192,7 @@ HRESULT Delete_IEHistory(BOOL bDeleteHistory, BOOL bDeleteHistoryIndex)
 
 		if (!bDeleteHistory) return S_OK;
 	}
-	
+#endif
     hr = CoCreateInstance(CLSID_CUrlHistory, NULL, CLSCTX_INPROC, 
 		                         IID_IUrlHistoryStg2, (void**)&pUrlHistoryStg2);
     if( (SUCCEEDED(hr)) && (pUrlHistoryStg2) )
@@ -12182,401 +12203,3 @@ HRESULT Delete_IEHistory(BOOL bDeleteHistory, BOOL bDeleteHistoryIndex)
 
 	return hr;
 }
-
-HRESULT Delete_IEAddressBarTypedURLs(void)
-{
-    HKEY hKey;
-	DWORD dwResult;
-	TCHAR szValueName[10];
-
-	// Open TypedURLs key.
-	dwResult = RegOpenKey(HKEY_CURRENT_USER,
-		            _T("Software\\Microsoft\\Internet Explorer\\TypedURLs"), &hKey);
-
-	int i = 1; wsprintf(szValueName, _T("url%d"), i); 
-
-	while(RegDeleteValue(hKey, szValueName) == ERROR_SUCCESS) 
-	{
-		i++; wsprintf(szValueName, _T("url%d"), i);
-	}
-
-	RegCloseKey(hKey); 
-
-	return S_OK;
-}
-
-// Note: actually, effect of running Delete_DesktopRunHistory is 
-// visible after reboot. 
-
-HRESULT Delete_DesktopRunMRU(void)
-{
-	HKEY hKey;
-	DWORD dwResult;
-	TCHAR* pszIndex = _T("abcdefghijklmnopqrstuvwxyz");
-	TCHAR szBuffer[2];    // character plus terminating NULL-character
-	TCHAR szValueName[2]; // registry value name
-	int i;
-
-	// Open RunMRU key.
-	dwResult = RegOpenKey(HKEY_CURRENT_USER,
-        _T("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU"), 
-		                                                                &hKey );
-	// Traverse all possible values and delete. This guarantees deletion
-    // even if the sequence is broken.
-	for(i = 0; i < 26 /* z */; i++)
-	{
-	    szBuffer[0] = *pszIndex;
-		szBuffer[1] = _T('\0');
-		lstrcpy(szValueName, szBuffer);
-		RegDeleteValue(hKey, szValueName); pszIndex++;
-    }
-
-	RegDeleteValue(hKey, _T("MRUList"));
-	
-	RegCloseKey(hKey); 
-
-	return S_OK;
-}
-
-HRESULT Delete_DesktopRecentDocsHistory(void)
-{
-	SHAddToRecentDocs(SHARD_PATH, NULL /* NULL clears history */);
-	return S_OK;
-}
-
-/*
-struct tagVARIANT
-    {
-    union 
-        {
-        struct __tagVARIANT
-            {
-            VARTYPE vt;
-            WORD wReserved1;
-            WORD wReserved2;
-            WORD wReserved3;
-            union 
-                {
-                LONGLONG llVal;
-                LONG lVal;
-                BYTE bVal;
-                SHORT iVal;
-                FLOAT fltVal;
-                DOUBLE dblVal;
-                VARIANT_BOOL boolVal;
-                _VARIANT_BOOL bool;
-                SCODE scode;
-                CY cyVal;
-                DATE date;
-                BSTR bstrVal;
-                IUnknown *punkVal;
-                IDispatch *pdispVal;
-                SAFEARRAY *parray;
-                BYTE *pbVal;
-                SHORT *piVal;
-                LONG *plVal;
-                LONGLONG *pllVal;
-                FLOAT *pfltVal;
-                DOUBLE *pdblVal;
-                VARIANT_BOOL *pboolVal;
-                _VARIANT_BOOL *pbool;
-                SCODE *pscode;
-                CY *pcyVal;
-                DATE *pdate;
-                BSTR *pbstrVal;
-                IUnknown **ppunkVal;
-                IDispatch **ppdispVal;
-                SAFEARRAY **pparray;
-                VARIANT *pvarVal;
-                PVOID byref;
-                CHAR cVal;
-                USHORT uiVal;
-                ULONG ulVal;
-                ULONGLONG ullVal;
-                INT intVal;
-                UINT uintVal;
-                DECIMAL *pdecVal;
-                CHAR *pcVal;
-                USHORT *puiVal;
-                ULONG *pulVal;
-                ULONGLONG *pullVal;
-                INT *pintVal;
-                UINT *puintVal;
-                struct __tagBRECORD
-                    {
-                    PVOID pvRecord;
-                    IRecordInfo *pRecInfo;
-                    } 	__VARIANT_NAME_4;
-                } 	__VARIANT_NAME_3;
-            } 	__VARIANT_NAME_2;
-        DECIMAL decVal;
-        }
-*/
-
-/* VARIANT STRUCTURE
- *
- *  VARTYPE vt;
- *  WORD wReserved1;
- *  WORD wReserved2;
- *  WORD wReserved3;
- *  union {
- *    LONG           VT_I4
- *    BYTE           VT_UI1
- *    SHORT          VT_I2
- *    FLOAT          VT_R4
- *    DOUBLE         VT_R8
- *    VARIANT_BOOL   VT_BOOL
- *    SCODE          VT_ERROR
- *    CY             VT_CY
- *    DATE           VT_DATE
- *    BSTR           VT_BSTR
- *    IUnknown *     VT_UNKNOWN
- *    IDispatch *    VT_DISPATCH
- *    SAFEARRAY *    VT_ARRAY
- *    BYTE *         VT_BYREF|VT_UI1
- *    SHORT *        VT_BYREF|VT_I2
- *    LONG *         VT_BYREF|VT_I4
- *    FLOAT *        VT_BYREF|VT_R4
- *    DOUBLE *       VT_BYREF|VT_R8
- *    VARIANT_BOOL * VT_BYREF|VT_BOOL
- *    SCODE *        VT_BYREF|VT_ERROR
- *    CY *           VT_BYREF|VT_CY
- *    DATE *         VT_BYREF|VT_DATE
- *    BSTR *         VT_BYREF|VT_BSTR
- *    IUnknown **    VT_BYREF|VT_UNKNOWN
- *    IDispatch **   VT_BYREF|VT_DISPATCH
- *    SAFEARRAY **   VT_BYREF|VT_ARRAY
- *    VARIANT *      VT_BYREF|VT_VARIANT
- *    PVOID          VT_BYREF (Generic ByRef)
- *    CHAR           VT_I1
- *    USHORT         VT_UI2
- *    ULONG          VT_UI4
- *    INT            VT_INT
- *    UINT           VT_UINT
- *    DECIMAL *      VT_BYREF|VT_DECIMAL
- *    CHAR *         VT_BYREF|VT_I1
- *    USHORT *       VT_BYREF|VT_UI2
- *    ULONG *        VT_BYREF|VT_UI4
- *    INT *          VT_BYREF|VT_INT
- *    UINT *         VT_BYREF|VT_UINT
- *  }
- */
-
-
-//typedef unsigned short VARTYPE;
-
-/*
- * VARENUM usage key,
- *
- * * [V] - may appear in a VARIANT
- * * [T] - may appear in a TYPEDESC
- * * [P] - may appear in an OLE property set
- * * [S] - may appear in a Safe Array
- *
- *
- *  VT_EMPTY            [V]   [P]     nothing
- *  VT_NULL             [V]   [P]     SQL style Null
- *  VT_I2               [V][T][P][S]  2 byte signed int
- *  VT_I4               [V][T][P][S]  4 byte signed int
- *  VT_R4               [V][T][P][S]  4 byte real
- *  VT_R8               [V][T][P][S]  8 byte real
- *  VT_CY               [V][T][P][S]  currency
- *  VT_DATE             [V][T][P][S]  date
- *  VT_BSTR             [V][T][P][S]  OLE Automation string
- *  VT_DISPATCH         [V][T]   [S]  IDispatch *
- *  VT_ERROR            [V][T][P][S]  SCODE
- *  VT_BOOL             [V][T][P][S]  True=-1, False=0
- *  VT_VARIANT          [V][T][P][S]  VARIANT *
- *  VT_UNKNOWN          [V][T]   [S]  IUnknown *
- *  VT_DECIMAL          [V][T]   [S]  16 byte fixed point
- *  VT_RECORD           [V]   [P][S]  user defined type
- *  VT_I1               [V][T][P][s]  signed char
- *  VT_UI1              [V][T][P][S]  unsigned char
- *  VT_UI2              [V][T][P][S]  unsigned short
- *  VT_UI4              [V][T][P][S]  unsigned long
- *  VT_I8                  [T][P]     signed 64-bit int
- *  VT_UI8                 [T][P]     unsigned 64-bit int
- *  VT_INT              [V][T][P][S]  signed machine int
- *  VT_UINT             [V][T]   [S]  unsigned machine int
- *  VT_INT_PTR             [T]        signed machine register size width
- *  VT_UINT_PTR            [T]        unsigned machine register size width
- *  VT_VOID                [T]        C style void
- *  VT_HRESULT             [T]        Standard return type
- *  VT_PTR                 [T]        pointer type
- *  VT_SAFEARRAY           [T]        (use VT_ARRAY in VARIANT)
- *  VT_CARRAY              [T]        C style array
- *  VT_USERDEFINED         [T]        user defined type
- *  VT_LPSTR               [T][P]     null terminated string
- *  VT_LPWSTR              [T][P]     wide null terminated string
- *  VT_FILETIME               [P]     FILETIME
- *  VT_BLOB                   [P]     Length prefixed bytes
- *  VT_STREAM                 [P]     Name of the stream follows
- *  VT_STORAGE                [P]     Name of the storage follows
- *  VT_STREAMED_OBJECT        [P]     Stream contains an object
- *  VT_STORED_OBJECT          [P]     Storage contains an object
- *  VT_VERSIONED_STREAM       [P]     Stream with a GUID version
- *  VT_BLOB_OBJECT            [P]     Blob contains an object 
- *  VT_CF                     [P]     Clipboard format
- *  VT_CLSID                  [P]     A Class ID
- *  VT_VECTOR                 [P]     simple counted array
- *  VT_ARRAY            [V]           SAFEARRAY*
- *  VT_BYREF            [V]           void* for local use
- *  VT_BSTR_BLOB                      Reserved for system use
- */
-
-
-/*
- * VARENUM usage key,
- *
- * * [V] - may appear in a VARIANT
- * * [T] - may appear in a TYPEDESC
- * * [P] - may appear in an OLE property set
- * * [S] - may appear in a Safe Array
- * * [C] - supported by class _variant_t
- *
- *
- *  VT_EMPTY            [V]   [P]        nothing
- *  VT_NULL             [V]   [P]        SQL style Null
- *  VT_I2               [V][T][P][S][C]  2 byte signed int
- *  VT_I4               [V][T][P][S][C]  4 byte signed int
- *  VT_R4               [V][T][P][S][C]  4 byte real
- *  VT_R8               [V][T][P][S][C]  8 byte real
- *  VT_CY               [V][T][P][S][C]  currency
- *  VT_DATE             [V][T][P][S][C]  date
- *  VT_BSTR             [V][T][P][S][C]  OLE Automation string
- *  VT_DISPATCH         [V][T][P][S][C]  IDispatch *
- *  VT_ERROR            [V][T]   [S][C]  SCODE
- *  VT_BOOL             [V][T][P][S][C]  True=-1, False=0
- *  VT_VARIANT          [V][T][P][S]     VARIANT *
- *  VT_UNKNOWN          [V][T]   [S][C]  IUnknown *
- *  VT_DECIMAL          [V][T]   [S][C]  16 byte fixed point
- *  VT_I1                  [T]           signed char
- *  VT_UI1              [V][T][P][S][C]  unsigned char
- *  VT_UI2                 [T][P]        unsigned short
- *  VT_UI4                 [T][P]        unsigned short
- *  VT_I8                  [T][P]        signed 64-bit int
- *  VT_UI8                 [T][P]        unsigned 64-bit int
- *  VT_INT                 [T]           signed machine int
- *  VT_UINT                [T]           unsigned machine int
- *  VT_VOID                [T]           C style void
- *  VT_HRESULT             [T]           Standard return type
- *  VT_PTR                 [T]           pointer type
- *  VT_SAFEARRAY           [T]          (use VT_ARRAY in VARIANT)
- *  VT_CARRAY              [T]           C style array
- *  VT_USERDEFINED         [T]           user defined type
- *  VT_LPSTR               [T][P]        null terminated string
- *  VT_LPWSTR              [T][P]        wide null terminated string
- *  VT_FILETIME               [P]        FILETIME
- *  VT_BLOB                   [P]        Length prefixed bytes
- *  VT_STREAM                 [P]        Name of the stream follows
- *  VT_STORAGE                [P]        Name of the storage follows
- *  VT_STREAMED_OBJECT        [P]        Stream contains an object
- *  VT_STORED_OBJECT          [P]        Storage contains an object
- *  VT_BLOB_OBJECT            [P]        Blob contains an object
- *  VT_CF                     [P]        Clipboard format
- *  VT_CLSID                  [P]        A Class ID
- *  VT_VECTOR                 [P]        simple counted array
- *  VT_ARRAY            [V]              SAFEARRAY*
- *  VT_BYREF            [V]              void* for local use
- */
-
-/*
-#include <atlbase.h>
-#include <shlobj.h>
-#include <UrlHist.h>
-//Deleting history
-// Error checking minimized for clarity.
-int main(int argc, char* argv[])
-{
-	USES_CONVERSION;
-	CoInitialize(NULL);
-
-	IUrlHistoryStg2* pUrlHistoryStg2 = NULL;
-	HRESULT hr = CoCreateInstance(CLSID_CUrlHistory,
-		NULL, CLSCTX_INPROC, IID_IUrlHistoryStg2,
-		(void**)&pUrlHistoryStg2);
-//hr = pUrlHistoryStg2->ClearHistory();
-//IUrlHistoryStg::QueryUrl iscached/
-	IEnumSTATURL* pEnumURL;
-	hr = pUrlHistoryStg2->EnumUrls(&pEnumURL);
-
-	STATURL suURL;
-	ULONG pceltFetched;
-	suURL.cbSize = sizeof(suURL);
-	hr = pEnumURL->Reset();
-
-	while((hr = pEnumURL->Next(1, &suURL, &pceltFetched)) == S_OK)
-	{
-		hr = pUrlHistoryStg2->DeleteUrl(suURL.pwcsUrl, 0);
-		printf("\"%s\" deleted.\n", W2T(suURL.pwcsUrl));
-	}
-
-	pEnumURL->Release();
-	pUrlHistoryStg2->Release();
-	CoUninitialize();
-}
-
-// Error checking minimized for clarity.
-//Draw back - a confirmation dialog will be displayed
-void DeleteUrlFromHistoryShell()
-{
-	HRESULT hr;
-
-	// Call this if needed.
-	CoInitialize( NULL );
-
-	IShellFolder* pDesktopFolder = NULL;
-	IMalloc* pMalloc = NULL;
-
-	hr = ::SHGetMalloc(&pMalloc);
-
-	// Get desktop folder.
-	hr = ::SHGetDesktopFolder(&pDesktopFolder);
-
-	// Get the history folder.
-	ITEMIDLIST* pidlHistoryFolder = NULL;
-	hr = ::SHGetSpecialFolderLocation(NULL, CSIDL_HISTORY, &pidlHistoryFolder);
-
-	// Get the IShellFolder of the history folder.
-	IShellFolder* pHistoryFolder = NULL;
-	hr = pDesktopFolder->BindToObject(pidlHistoryFolder, NULL, IID_IShellFolder, (void**)&pHistoryFolder);
-
-	// Enumerate the history items.
-	IEnumIDList* pHistoryEnum = NULL;
-	hr = pHistoryFolder->EnumObjects(NULL, SHCONTF_FOLDERS | SHCONTF_NONFOLDERS, &pHistoryEnum);
-
-	ITEMIDLIST* pidl = NULL;
-	ULONG fetched = 0;
-
-	hr = pHistoryEnum->Next(1, &pidl, &fetched);
-
-	if (SUCCEEDED(hr))
-	{
-		const ITEMIDLIST* pidl2 = pidl;
-
-		// Get the IContextMenu interface.
-		IContextMenu* pContextMenu = NULL;
-		hr = pHistoryFolder->GetUIObjectOf(NULL, 1, &pidl2, IID_IContextMenu, NULL, (void**)&pContextMenu);
-
-		if (SUCCEEDED(hr))
-		{
-			CMINVOKECOMMANDINFO pCommandInfo = { 0 };
-
-			pCommandInfo.cbSize = sizeof(CMINVOKECOMMANDINFO);
-			pCommandInfo.lpVerb = _T("delete");
-			pCommandInfo.fMask = CMIC_MASK_FLAG_NO_UI; // has no effect
-			hr = pContextMenu->InvokeCommand(&pCommandInfo);
-		}
-
-		pContextMenu->Release();
-	}
-
-	pHistoryEnum->Release();
-	pHistoryFolder->Release();
-	pMalloc->Release();
-	pDesktopFolder->Release();
-}
-*/
-
-
-

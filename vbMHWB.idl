@@ -15,8 +15,8 @@ import "ocidl.idl";
 // 0 == FALSE, -1 == TRUE
 //typedef short VARIANT_BOOL;
 
+#ifndef _WIN32_WCE
 //Ifaces taken from Microsoft Platform SDK for Windows Server 2003 R2
-//#if _ATL_VER < 0x0800
 //-------------------------------------------------------------------------
 //
 //  INewWindowManager
@@ -35,29 +35,9 @@ import "ocidl.idl";
 								  [in] DWORD dwUserActionTime);
 	};
 
-
 //-------------------------------------------------------------------------
 //
-//  IHTMLOMWindowServices
-//
-//-------------------------------------------------------------------------
-	[
-		object,
-		pointer_default(unique),
-		uuid(3050f5fc-98b5-11cf-bb82-00aa00bdce0b)
-	]
-	interface IHTMLOMWindowServices : IUnknown
-	{
-		HRESULT moveTo([in] LONG x,[in] LONG y);
-		HRESULT moveBy([in] LONG x,[in] LONG y);
-		HRESULT resizeTo([in] LONG x,[in] LONG y);
-		HRESULT resizeBy([in] LONG x,[in] LONG y);
-	};
-//#endif // _ATL_VER < 0x0800
-
-//-------------------------------------------------------------------------
-//
-//  INewWindowManager - Part of IE 6 developement SDK
+//  IDownloadManager
 //
 //-------------------------------------------------------------------------
 	interface IDownloadManager;
@@ -81,6 +61,7 @@ import "ocidl.idl";
 			[in] UINT uiCP              // The code page of the object's display name
 		);
 	};
+#endif
 
 	typedef enum WINDOWSHOOK_TYPES
 	{
@@ -274,6 +255,7 @@ library VBMHWBLib
 	importlib("stdole32.tlb");
 	importlib("stdole2.tlb");
 
+#ifndef _WIN32_WCE
 	typedef enum NEW_WINDOW3_FLAGS
 	{
 		NWMF_UNLOADING        = 0x0001,  // The query is occuring during onBeforeUnload or onUnload
@@ -286,6 +268,7 @@ library VBMHWBLib
 		NWMF_USERREQUESTED    = 0x0080,  // There is no doubt the user requested this window (from RClick->Open in New Window, or Shift+Clicked a link)
 		NWMF_USERALLOWED      = 0x0100,  // This popup is the result of the user requesting a replay that resulted in a refresh
 	} NEW_WINDOW3_FLAGS;
+#endif
 
 	typedef enum WB_DOC_HOST_UI_DBL_CLK
 	{

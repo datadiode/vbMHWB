@@ -3,9 +3,10 @@
 //      but are changed infrequently
 
 #define STRICT
-#ifndef _WIN32_WINNT
+
 #define _WIN32_WINNT 0x0501
-#endif
+#define _WIN32_IE    0x0600
+
 #define _ATL_APARTMENT_THREADED
 
 #include <atlbase.h>

@@ -314,7 +314,9 @@ IProtectFocus
 #include "UrlParts.h"
 //To use our own protocol handlers for HTTP and HTTPS
 #include "ProtocolImpl.h"
+#ifndef _WIN32_WCE
 #include "AutoCompleter.h"
+#endif
 //AuxCrt.cpp added to ATL include directory
 //Refer to stdafx.cpp for explanation
 
@@ -508,6 +510,21 @@ private:
 
 };
 
+class CvbWBLicense
+{
+protected:
+	static BOOL VerifyLicenseKey(BSTR bstr)
+	{
+		return wcscmp(bstr, L"ByVN45eOeUOrLz2t6u4X7Q") == 0;
+	}
+	static BOOL GetLicenseKey(DWORD, BSTR *pBstr)
+	{
+		*pBstr = SysAllocString(L"ByVN45eOeUOrLz2t6u4X7Q");
+		return TRUE;
+	}
+	static BOOL IsLicenseValid() { return TRUE; }
+};
+
 /////////////////////////////////////////////////////////////////////////////
 // CvbWB
 class ATL_NO_VTABLE CvbWB : 
@@ -521,12 +538,14 @@ class ATL_NO_VTABLE CvbWB :
 	public IOleInPlaceActiveObjectImpl<CvbWB>,
 	public IViewObjectExImpl<CvbWB>,
 	public IOleInPlaceObjectWindowlessImpl<CvbWB>,
-	public ISupportErrorInfo,
+	public ISupportErrorInfoImpl<&IID_IvbWB>,
 	public IConnectionPointContainerImpl<CvbWB>,
 	public IPersistStorageImpl<CvbWB>,
 	public ISpecifyPropertyPagesImpl<CvbWB>,
 	public IQuickActivateImpl<CvbWB>,
+#ifndef _WIN32_WCE
 	public IDataObjectImpl<CvbWB>,
+#endif
 	public IProvideClassInfo2Impl<&CLSID_vbWB, &DIID__IvbWBEvents, &LIBID_VBMHWBLib>,
 	public IPropertyNotifySinkCP<CvbWB>,
 	public CComCoClass<CvbWB, &CLSID_vbWB>,
@@ -548,6 +567,13 @@ class ATL_NO_VTABLE CvbWB :
 public:
 	CvbWB();
 	~CvbWB();
+	DECLARE_CLASSFACTORY2(CvbWBLicense)
+
+	DECLARE_OLEMISC_STATUS(OLEMISC_RECOMPOSEONRESIZE |
+		OLEMISC_CANTLINKINSIDE |
+		OLEMISC_INSIDEOUT |
+		OLEMISC_ACTIVATEWHENVISIBLE |
+		OLEMISC_SETCLIENTSITEFIRST)
 
 DECLARE_REGISTRY_RESOURCEID(IDR_VBWB)
 
@@ -573,7 +599,9 @@ BEGIN_COM_MAP(CvbWB)
 	COM_INTERFACE_ENTRY(ISpecifyPropertyPages)
 	COM_INTERFACE_ENTRY(IQuickActivate)
 	COM_INTERFACE_ENTRY(IPersistStorage)
+#ifndef _WIN32_WCE
 	COM_INTERFACE_ENTRY(IDataObject)
+#endif
 	COM_INTERFACE_ENTRY(IProvideClassInfo)
 	COM_INTERFACE_ENTRY(IProvideClassInfo2)
 	COM_INTERFACE_ENTRY_IMPL(IConnectionPointContainer)
@@ -607,10 +635,7 @@ END_MSG_MAP()
 //  LRESULT CommandHandler(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 //  LRESULT NotifyHandler(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 
-
-
-// ISupportsErrorInfo
-	STDMETHOD(InterfaceSupportsErrorInfo)(REFIID riid);
+	HRESULT IPersistStreamInit_Load(LPSTREAM, ATL_PROPMAP_ENTRY const *) { return S_OK; }
 
 // IViewObjectEx
 	DECLARE_VIEW_STATUS(0)
@@ -869,8 +894,10 @@ private:
 	long		m_TextZoomVal; //Font size 0-4 (smallest to largerst)
 	//Array of SubClassed Wnds
 	CSimpleArray<CSubclassWnd*> m_Subclassed;
+#ifndef _WIN32_WCE
 	CSimpleArray<CAutoCompleter*> m_AutoCompleters;
-	
+#endif
+
 	CTmpBuffer	m_StrErr_WBNOTFOUND;
 	CTmpBuffer	m_StrErr_Tmp;
 
@@ -1055,10 +1082,10 @@ private:
 	void CleanUp();
 };
 
+#ifndef _WIN32_WCE
 ////////////////////////////////////////////////////////////////////////
 //WBNewWindowManager
 ////////////////////////////////////////////////////////////////////////
-
 class WBNewWindowManager : public INewWindowManager
 {
 public:
@@ -1093,6 +1120,7 @@ private:
     IWB			*m_pHost;
 	long		lEFail;
 };
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 //WBDropTarget
@@ -1297,6 +1325,7 @@ private:
 	HRESULT m_hr;
 };
 
+#ifndef _WIN32_WCE
 ///////////////////////////////////////////////////////////////////////
 ///////////WBDownLoadManager
 ///////////////////////////////////////////////////////////////////////
@@ -1326,6 +1355,7 @@ private:
 	IWB *m_pHost;
 	HWND m_hwndIEServer;
 };
+#endif
 
 ///////////////////////////////////////////////////////////////////////
 ///////////WBServiceProvider

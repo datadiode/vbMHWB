@@ -7,7 +7,6 @@
 
 #include "stdafx.h"
 #include "resource.h"
-#include <initguid.h>
 
 //Globals
 CSimpleArray<void*> gCtrlInstances;
@@ -31,33 +30,29 @@ END_OBJECT_MAP()
 // DLL Entry Point
 
 extern "C"
-BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID /*lpReserved*/)
+BOOL WINAPI DllMain(HANDLE hInstance, DWORD dwReason, LPVOID /*lpReserved*/)
 {
 
     if (dwReason == DLL_PROCESS_ATTACH)
     {
-		//Default is false
-		gb_IsHttpRegistered = FALSE;
-		gb_IsHttpsRegistered = FALSE;
-		_Module.Init(ObjectMap, hInstance, &LIBID_VBMHWBLib);
-        DisableThreadLibraryCalls(hInstance);
-		// Initialize COM library
-		OleInitialize(NULL);
+        //Default is false
+        gb_IsHttpRegistered = FALSE;
+        gb_IsHttpsRegistered = FALSE;
+        _Module.Init(ObjectMap, (HINSTANCE)hInstance, &LIBID_VBMHWBLib);
+        DisableThreadLibraryCalls((HINSTANCE)hInstance);
     }
     else if (dwReason == DLL_PROCESS_DETACH)
-	{
-	    // Release COM library
-	    OleUninitialize();
-		//Any registered HTTPProtocol + HTTPSProtocol
-		//will be unregistered once we are done here
-		if(gCtrlInstances.GetSize() > 0)
-		{
-			for(int i = 0; i < gCtrlInstances.GetSize(); i++)
-				gCtrlInstances[i] = NULL;
-		}
-		gCtrlInstances.RemoveAll();
+    {
+        //Any registered HTTPProtocol + HTTPSProtocol
+        //will be unregistered once we are done here
+        if(gCtrlInstances.GetSize() > 0)
+        {
+            for(int i = 0; i < gCtrlInstances.GetSize(); i++)
+                gCtrlInstances[i] = NULL;
+        }
+        gCtrlInstances.RemoveAll();
         _Module.Term();
-	}
+    }
     return TRUE;    // ok
 }
 
@@ -94,4 +89,12 @@ STDAPI DllUnregisterServer(void)
     return _Module.UnregisterServer(TRUE);
 }
 
-
+#ifdef _WIN32_WCE
+ATLAPI ATL::AtlRegisterClassCategoriesHelper(
+    _In_ REFCLSID clsid,
+    _In_opt_ const struct _ATL_CATMAP_ENTRY* pCatMap,
+    _In_ BOOL bRegister)
+{
+    return S_OK;
+}
+#endif
