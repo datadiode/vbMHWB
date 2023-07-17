@@ -2,16 +2,9 @@
 //      or project specific include files that are used frequently,
 //      but are changed infrequently
 
-#if !defined(AFX_STDAFX_H__86FE89DE_AD02_403D_9957_245D0FC352FA__INCLUDED_)
-#define AFX_STDAFX_H__86FE89DE_AD02_403D_9957_245D0FC352FA__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
-
 #define STRICT
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0400
+#define _WIN32_WINNT 0x0501
 #endif
 #define _ATL_APARTMENT_THREADED
 
@@ -41,5 +34,3 @@ extern CComModule _Module;
 
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
-
-#endif // !defined(AFX_STDAFX_H__86FE89DE_AD02_403D_9957_245D0FC352FA__INCLUDED)

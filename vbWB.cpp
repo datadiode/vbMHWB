@@ -6278,7 +6278,7 @@ STDMETHODIMP WBDropTarget::Drop(
 				//
 				//HTML
 				//
-				FORMATETC	fehtml = { m_pHost->m_EventsPtr->m_CF_HTML, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+				FORMATETC fehtml = { static_cast<CLIPFORMAT>(m_pHost->m_EventsPtr->m_CF_HTML), NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 				hr = pDataObj->GetData(&fehtml, &stm);
 				if( SUCCEEDED(hr) )
 				{
@@ -6302,7 +6302,7 @@ STDMETHODIMP WBDropTarget::Drop(
 				//
 				//RTF
 				//
-				FORMATETC	fertf = { m_pHost->m_EventsPtr->m_CF_RTF, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+				FORMATETC fertf = { static_cast<CLIPFORMAT>(m_pHost->m_EventsPtr->m_CF_RTF), NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 				hr = pDataObj->GetData(&fertf, &stm);
 				if( SUCCEEDED(hr) )
 				{
@@ -6332,7 +6332,7 @@ STDMETHODIMP WBDropTarget::Drop(
 				//    DATADIR_SET = 2, 
 				bool gotit = false;
 				IEnumFORMATETC *enumfe;
-				FORMATETC	getfe = { m_pHost->m_EventsPtr->m_CF_URL, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+				FORMATETC getfe = { static_cast<CLIPFORMAT>(m_pHost->m_EventsPtr->m_CF_URL), NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 				HRESULT rethr = pDataObj->EnumFormatEtc(DATADIR_GET, &enumfe);
 				if((enumfe) && (SUCCEEDED(rethr)) )
 				{
