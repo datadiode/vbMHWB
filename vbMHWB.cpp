@@ -90,7 +90,7 @@ STDAPI DllUnregisterServer(void)
 }
 
 #ifdef _WIN32_WCE
-ATLAPI ATL::AtlRegisterClassCategoriesHelper(
+HRESULT ATL::AtlRegisterClassCategoriesHelper(
     _In_ REFCLSID clsid,
     _In_opt_ const struct _ATL_CATMAP_ENTRY* pCatMap,
     _In_ BOOL bRegister)

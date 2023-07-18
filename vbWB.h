@@ -898,9 +898,6 @@ private:
 	CSimpleArray<CAutoCompleter*> m_AutoCompleters;
 #endif
 
-	CTmpBuffer	m_StrErr_WBNOTFOUND;
-	CTmpBuffer	m_StrErr_Tmp;
-
 	void InitInternalHookStructures();
 // IvbWBUI
 //public:

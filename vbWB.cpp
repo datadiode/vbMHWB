@@ -118,10 +118,6 @@ typedef struct _WBFILEGROUPDESCRIPTORA {
      WBFILEDESCRIPTORA fgd[1];
 } WBFILEGROUPDESCRIPTORA;
 
-//Error msg send to client from all over the place
-//Replaced with m_StrErr_WBNOTFOUND
-//const TCHAR WB_NOT_FOUND[] = _T("Unable to find browser in collection."); 
-
 const LPCTSTR vbCrLf				= _T("\r\n");
 const LPCTSTR IE_SERVER_CLASSNAME	= _T("Internet Explorer_Server");
 const LPCTSTR STR_CL_HTML_FORMAT	= _T("HTML Format");
@@ -178,8 +174,6 @@ static CLSID const WB_CGI_IWebBrowser          = { 0xED016940 , 0xBD5B, 0x11CF, 
 //Same as DISPID_NEWWINDOW3, renamed so as not to cause conflicts
 #define DISPID_NEWWINDOW_WB3           273
 
-#define NO_FILE ((DWORD)-1)
-#define DW_ZERO ((DWORD)0)
 #define Alert(x) { ::MessageBox(GetDesktopWindow(), x, x, MB_OK);} // return E_NOTIMPL; }
 //Simple assert which works compiled or not
 //Silent exit - Uncomment for debugging
@@ -363,15 +357,12 @@ CvbWB::CvbWB()
 	m_CF_URL = RegisterClipboardFormat(STR_CL_URL_FORMAT);	
 	m_CF_NETRESOURCE = RegisterClipboardFormat(STR_CL_NR_FORMAT);
 
-	m_StrErr_WBNOTFOUND = (UINT)IDS_WB_NOT_FOUND;
-
 	InitInternalHookStructures();
 
 	//Add this instance to our global ptrs
-	LPVOID thisPtr = reinterpret_cast<LPVOID>(this);
 	//Just in case
-	if(gCtrlInstances.Find(thisPtr) == -1)
-		gCtrlInstances.Add(thisPtr);
+	if(gCtrlInstances.Find(this) == -1)
+		gCtrlInstances.Add(this);
 }
 
 CvbWB::~CvbWB()
@@ -381,8 +372,7 @@ CvbWB::~CvbWB()
 	//Attempting to access a deleted object via an invalid ptr
 	if(gCtrlInstances.GetSize() > 0)
 	{
-		LPVOID thisPtr = reinterpret_cast<LPVOID>(this);
-		int i = gCtrlInstances.Find(thisPtr);
+		int i = gCtrlInstances.Find(this);
 		if( i > -1)
 		{
 			gCtrlInstances[i] = NULL;
@@ -512,48 +502,48 @@ HRESULT CvbWB::OnDraw(ATL_DRAWINFO& di)
 		int x = 5;
 		int y = 15;
 		
-		buff = (UINT)IDS_PROJNAME;
-		buff.AppendResStr((UINT)IDS_CUR_VERSION);
-		buff.AppendResStr((UINT)IDS_CTL_DESIGNMODE);
+		buff = IDS_PROJNAME;
+		buff.AppendResStr(IDS_CUR_VERSION);
+		buff.AppendResStr(IDS_CTL_DESIGNMODE);
 		MoveToEx(di.hdcDraw, x, y, (LPPOINT) NULL);
 		TextOut(di.hdcDraw, x, y, buff, buff.GetBufferTextLen());
 
 		y += 20;
-		buff = (UINT)IDS_AUTHORNAME;
+		buff = IDS_AUTHORNAME;
 		MoveToEx(di.hdcDraw, x, y, (LPPOINT) NULL);
 		TextOut(di.hdcDraw, x, y, buff, buff.GetBufferTextLen());
 
 		y += 20;
-		buff = (UINT)IDS_AUTHORCONTACTINFO;
+		buff = IDS_AUTHORCONTACTINFO;
 		MoveToEx(di.hdcDraw, x, y, (LPPOINT) NULL);
 		TextOut(di.hdcDraw, x, y, buff, buff.GetBufferTextLen());
 
 		y += 20;
-		buff = (UINT)IDS_HOMEPAGE;
+		buff = IDS_HOMEPAGE;
 		MoveToEx(di.hdcDraw, x, y, (LPPOINT) NULL);
 		TextOut(di.hdcDraw, x, y, buff, buff.GetBufferTextLen());
 
 		y += 20;
-		buff = (UINT)IDS_HWND;
+		buff = IDS_HWND;
 		buff.Appendlong((long)m_hWnd);
 		MoveToEx(di.hdcDraw, x, y, (LPPOINT) NULL);
 		TextOut(di.hdcDraw, x, y, buff, buff.GetBufferTextLen());
 		
 		y += 20;
-		buff = (UINT)IDS_THREADID;
+		buff = IDS_THREADID;
 		buff.Appendlong((long)GetCurrentThreadId());
 		MoveToEx(di.hdcDraw, x, y, (LPPOINT) NULL);
 		TextOut(di.hdcDraw, x, y, buff, buff.GetBufferTextLen());
 		
 		y += 20;
-		buff = (UINT)IDS_INST_HANDLE;
+		buff = IDS_INST_HANDLE;
 		buff.Appendlong((long)_Module.GetModuleInstance());
 		MoveToEx(di.hdcDraw, x, y, (LPPOINT) NULL);
 		TextOut(di.hdcDraw, x, y, buff, buff.GetBufferTextLen());
 //
 		y += 20;
 		CTmpBuffer buff1(MAX_PATH);
-		buff = (UINT)IDS_MODULE_PATH;
+		buff = IDS_MODULE_PATH;
 		int len = GetModuleFileName(GetModuleHandle(NULL), &buff1 , MAX_PATH);
 		if(len > 0)
 		{
@@ -794,8 +784,7 @@ STDMETHODIMP CvbWB::RemoveBrowser(short wbUIDToRemove)
 
 				if (FAILED(hr))
 				{
-					m_StrErr_Tmp = (UINT)IDS_UNABLETO_REMOVEWB;
-					return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, IDS_UNABLETO_REMOVEWB, IID_IvbWB, DISP_E_EXCEPTION);
 				}
 
 				//Check ref count
@@ -815,20 +804,19 @@ STDMETHODIMP CvbWB::RemoveBrowser(short wbUIDToRemove)
 //					TCHAR printbuf[80];
 //					wsprintf(printbuf,_T("Reference count should be one. Current ref count is %d."),m_arrWB[i]->m_dwRefCount);
 //					::MessageBox(GetDesktopWindow(),printbuf,_T("Ref Count"),MB_OK);
-//					return AtlReportError(CLSID_vbWB, printbuf,IID_IvbWB,DISP_E_EXCEPTION);
+//					return AtlReportError(CLSID_vbWB, printbuf, IID_IvbWB, DISP_E_EXCEPTION);
 //				}				
 				m_arrWB[i] = NULL;
 				m_arrWB.RemoveAt(i);
 			}
 			else
 			{
-				m_StrErr_Tmp = (UINT)IDS_WBHOST_NOT_FOUND;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_WBHOST_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 			}
 		}
 		else
 		{
-			return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND ,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	return hret;
@@ -843,7 +831,7 @@ STDMETHODIMP CvbWB::Refresh(short wbUID)
 			m_arrWB[i]->pWebBrowser->Refresh();
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -856,7 +844,7 @@ STDMETHODIMP CvbWB::Stop(short wbUID)
 			m_arrWB[i]->pWebBrowser->Stop();
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 }
@@ -870,7 +858,7 @@ STDMETHODIMP CvbWB::GoBack(short wbUID)
 			m_arrWB[i]->pWebBrowser->GoBack();
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 }
@@ -884,7 +872,7 @@ STDMETHODIMP CvbWB::GoForward(short wbUID)
 			m_arrWB[i]->pWebBrowser->GoForward();
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 }
@@ -898,7 +886,7 @@ STDMETHODIMP CvbWB::GoHome(short wbUID)
 			m_arrWB[i]->pWebBrowser->GoHome();
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -912,10 +900,10 @@ STDMETHODIMP CvbWB::NavigateSimple(short wbUID, BSTR URL)
 			m_arrWB[i]->pWebBrowser->Navigate(URL,NULL,NULL,NULL,NULL);
 		}
 		else
-			return AtlReportError(CLSID_vbWB, "Unable to find host or browser object.",IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, "Unable to find host or browser object.", IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -932,7 +920,7 @@ STDMETHODIMP CvbWB::get_WebBrowser(short wbUID, LPDISPATCH *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -948,7 +936,7 @@ STDMETHODIMP CvbWB::get_LocationURL(short wbUID, BSTR *pURL)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -971,7 +959,7 @@ STDMETHODIMP CvbWB::get_Offline(short wbUID, VARIANT_BOOL *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -992,7 +980,7 @@ STDMETHODIMP CvbWB::put_Offline(short wbUID, VARIANT_BOOL newVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1009,7 +997,7 @@ STDMETHODIMP CvbWB::ReadyState(short wbUID, READYSTATE *plReadyState)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1024,7 +1012,7 @@ STDMETHODIMP CvbWB::GoSearch(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1037,7 +1025,7 @@ STDMETHODIMP CvbWB::Refresh2(short wbUID, VARIANT *level)
 			m_arrWB[i]->pWebBrowser->Refresh2(level);
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1052,7 +1040,7 @@ STDMETHODIMP CvbWB::get_Busy(short wbUID, VARIANT_BOOL *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1073,7 +1061,7 @@ STDMETHODIMP CvbWB::get_RegisterAsBrowser(short wbUID, VARIANT_BOOL *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1094,7 +1082,7 @@ STDMETHODIMP CvbWB::put_RegisterAsBrowser(short wbUID, VARIANT_BOOL newVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1122,7 +1110,7 @@ STDMETHODIMP CvbWB::get_RegisterAsDropTarget(short wbUID,VARIANT_BOOL bUseIEDefa
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1166,7 +1154,7 @@ STDMETHODIMP CvbWB::put_RegisterAsDropTarget(short wbUID,VARIANT_BOOL bUseIEDefa
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1187,7 +1175,7 @@ STDMETHODIMP CvbWB::get_Silent(short wbUID, VARIANT_BOOL *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1208,7 +1196,7 @@ STDMETHODIMP CvbWB::put_Silent(short wbUID, VARIANT_BOOL newVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1224,7 +1212,7 @@ STDMETHODIMP CvbWB::get_LocationName(short wbUID, BSTR *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1245,7 +1233,7 @@ STDMETHODIMP CvbWB::SelectAll(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1260,7 +1248,7 @@ STDMETHODIMP CvbWB::Paste(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1275,7 +1263,7 @@ STDMETHODIMP CvbWB::Copy(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1290,7 +1278,7 @@ STDMETHODIMP CvbWB::Cut(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1305,7 +1293,7 @@ STDMETHODIMP CvbWB::Undo(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1320,7 +1308,7 @@ STDMETHODIMP CvbWB::Redo(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1335,7 +1323,7 @@ STDMETHODIMP CvbWB::ClearSelection(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1350,7 +1338,7 @@ STDMETHODIMP CvbWB::Delete(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1370,30 +1358,30 @@ STDMETHODIMP CvbWB::Find(short wbUID)
 									OLECMDEXECOPT_DODEFAULT,NULL,NULL);
 /*
 		else
-			return AtlReportError(CLSID_vbWB, _T("No Command Target Found."),IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, _T("No Command Target Found."), IID_IvbWB, DISP_E_EXCEPTION);
 
 		switch (hr)
 		{
 		case E_FAIL:
-				return AtlReportError(CLSID_vbWB, _T("E_FAIL"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("E_FAIL"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case E_UNEXPECTED:
-				return AtlReportError(CLSID_vbWB, _T("E_UNEXPECTED"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("E_UNEXPECTED"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_UNKNOWNGROUP:
-				return AtlReportError(CLSID_vbWB, _T("EOLECMDERR_E_UNKNOWNGROUP"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("EOLECMDERR_E_UNKNOWNGROUP"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_NOTSUPPORTED: //returns
-				return AtlReportError(CLSID_vbWB, _T("OLECMDERR_E_NOTSUPPORTED"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("OLECMDERR_E_NOTSUPPORTED"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_DISABLED:
-				return AtlReportError(CLSID_vbWB, _T("OLECMDERR_E_DISABLED"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("OLECMDERR_E_DISABLED"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_NOHELP:
-				return AtlReportError(CLSID_vbWB, _T("OLECMDERR_E_NOHELP"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("OLECMDERR_E_NOHELP"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_CANCELED:
-				return AtlReportError(CLSID_vbWB, _T("OLECMDERR_E_CANCELED"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("OLECMDERR_E_CANCELED"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		default:
 			break;
@@ -1401,7 +1389,7 @@ STDMETHODIMP CvbWB::Find(short wbUID)
 */
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1416,7 +1404,7 @@ STDMETHODIMP CvbWB::PasteSpecial(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1431,7 +1419,7 @@ STDMETHODIMP CvbWB::Spell(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1446,7 +1434,7 @@ STDMETHODIMP CvbWB::Properties(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1461,7 +1449,7 @@ STDMETHODIMP CvbWB::NewWindow(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1488,30 +1476,30 @@ STDMETHODIMP CvbWB::FileOpen(short wbUID)
 		}
 /*
 		else
-			return AtlReportError(CLSID_vbWB, _T("No Command Target Found."),IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, _T("No Command Target Found."), IID_IvbWB, DISP_E_EXCEPTION);
 
 		switch (hr)
 		{
 		case E_FAIL:
-				return AtlReportError(CLSID_vbWB, _T("Error E_FAIL"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("Error E_FAIL"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case E_UNEXPECTED:
-				return AtlReportError(CLSID_vbWB, _T("Error E_UNEXPECTED"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("Error E_UNEXPECTED"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_UNKNOWNGROUP:
-				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_UNKNOWNGROUP"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_UNKNOWNGROUP"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_NOTSUPPORTED: //returns
-				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_NOTSUPPORTED"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_NOTSUPPORTED"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_DISABLED:
-				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_DISABLED"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_DISABLED"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_NOHELP:
-				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_NOHELP"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_NOHELP"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		case OLECMDERR_E_CANCELED:
-				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_CANCELED"),IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, _T("Error OLECMDERR_E_CANCELED"), IID_IvbWB, DISP_E_EXCEPTION);
 			break;
 		default:
 			break;
@@ -1519,7 +1507,7 @@ STDMETHODIMP CvbWB::FileOpen(short wbUID)
 */
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1536,7 +1524,7 @@ STDMETHODIMP CvbWB::Save(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1552,7 +1540,7 @@ STDMETHODIMP CvbWB::SaveAs(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1567,7 +1555,7 @@ STDMETHODIMP CvbWB::Print(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1582,7 +1570,7 @@ STDMETHODIMP CvbWB::PrintPreview(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1597,7 +1585,7 @@ STDMETHODIMP CvbWB::PageSetup(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1612,7 +1600,7 @@ STDMETHODIMP CvbWB::Print2(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1627,7 +1615,7 @@ STDMETHODIMP CvbWB::PrintPreview2(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1671,7 +1659,7 @@ STDMETHODIMP CvbWB::ViewSource(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1686,7 +1674,7 @@ STDMETHODIMP CvbWB::AddToFavorites(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1703,7 +1691,7 @@ STDMETHODIMP CvbWB::SetFocusW(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1719,7 +1707,7 @@ STDMETHODIMP CvbWB::PlaceWBOnTop(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1773,13 +1761,12 @@ STDMETHODIMP CvbWB::ExecWB(short wbUID,long cmdID, long cmdExecOpt, VARIANT *pva
 			HRESULT hr = m_arrWB[i]->pOleCommandTarget->Exec(NULL,cmdID,cmdExecOpt,pvaIn,pvaOut);
 			if (FAILED(hr))
 			{
-				m_StrErr_Tmp = (UINT)IDS_EXECWB_FAILED;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_EXECWB_FAILED, IID_IvbWB, DISP_E_EXCEPTION);
 			}
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1806,13 +1793,12 @@ STDMETHODIMP CvbWB::QueryStatusWB(short wbUID, long cmdID, long *pcmdf)
 			}
 			else
 			{
-				m_StrErr_Tmp = (UINT)IDS_QSWB_FAILED;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_QSWB_FAILED, IID_IvbWB, DISP_E_EXCEPTION);
 			}
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 }
@@ -1851,7 +1837,7 @@ STDMETHODIMP CvbWB::get_UseIEDefaultFileDownload(short wbUID, VARIANT_BOOL *pVal
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1879,7 +1865,7 @@ STDMETHODIMP CvbWB::put_UseIEDefaultFileDownload(short wbUID, VARIANT_BOOL newVa
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1894,7 +1880,7 @@ STDMETHODIMP CvbWB::get_HWNDShellEmbedding(short wbUID, long *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1911,22 +1897,20 @@ STDMETHODIMP CvbWB::get_FramesCount(short wbUID, long *pVal)
 			HRESULT hr = m_arrWB[i]->pWebBrowser->get_Document(&spDisp);
 			if(FAILED(hr) || !spDisp)
 			{
-				m_StrErr_Tmp = (UINT)IDS_NO_DOCDISPATCH;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_NO_DOCDISPATCH, IID_IvbWB, DISP_E_EXCEPTION);
 			}
 			
 			CComQIPtr<IHTMLDocument2> spDoc( spDisp );
 			if(!spDoc)
 			{
-				m_StrErr_Tmp = (UINT)IDS_NO_DOCOBJECT;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_NO_DOCOBJECT, IID_IvbWB, DISP_E_EXCEPTION);
 			}
 			
 			*pVal = m_arrWB[i]->FramesCount(spDoc);
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1944,7 +1928,7 @@ STDMETHODIMP CvbWB::get_WBVisible(short wbUID, VARIANT_BOOL *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1965,7 +1949,7 @@ STDMETHODIMP CvbWB::put_WBVisible(short wbUID, VARIANT_BOOL newVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1980,7 +1964,7 @@ STDMETHODIMP CvbWB::get_Application(short wbUID, LPDISPATCH *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -1995,7 +1979,7 @@ STDMETHODIMP CvbWB::get_Document(short wbUID, LPDISPATCH *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -2058,12 +2042,11 @@ STDMETHODIMP CvbWB::get_ActiveElementObj(short wbUID, LPDISPATCH *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return hret;
 
 ReturnError:
-	m_StrErr_Tmp = (UINT)IDS_NO_ACTIVEELEM;
-	return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+	return AtlReportError(CLSID_vbWB, IDS_NO_ACTIVEELEM, IID_IvbWB, DISP_E_EXCEPTION);
 }
 
 STDMETHODIMP CvbWB::get_ActiveDocumentObj(short wbUID, LPDISPATCH *pVal)
@@ -2109,12 +2092,11 @@ STDMETHODIMP CvbWB::get_ActiveDocumentObj(short wbUID, LPDISPATCH *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return hret;
 
 ReturnError:
-	m_StrErr_Tmp = (UINT)IDS_NO_ACTIVEELEM;
-	return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+	return AtlReportError(CLSID_vbWB, IDS_NO_ACTIVEELEM, IID_IvbWB, DISP_E_EXCEPTION);
 }
 
 STDMETHODIMP CvbWB::Navigate2(short wbUID, VARIANT *URL, VARIANT *Flags, VARIANT *TargetFrameName, VARIANT *PostData, VARIANT *Headers)
@@ -2128,7 +2110,7 @@ STDMETHODIMP CvbWB::Navigate2(short wbUID, VARIANT *URL, VARIANT *Flags, VARIANT
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -2143,7 +2125,7 @@ STDMETHODIMP CvbWB::Navigate(short wbUID, BSTR URL, VARIANT *Flags, VARIANT *Tar
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -2171,16 +2153,14 @@ STDMETHODIMP CvbWB::AddBrowser(short *wbUID, VARIANT_BOOL bBringToFront)
 											m_StartupURL);
 		if (FAILED(hr))
 		{
-			m_StrErr_Tmp = (UINT)IDS_WB_CREATE_FAILED;
-			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_WB_CREATE_FAILED, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 		if(VARIANTBOOLTOBOOL(bBringToFront))
 			newiwb->BringWbToTop();
 	}
 	else
 	{
-		m_StrErr_Tmp = (UINT)IDS_HOST_CREATE_FAILED;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_HOST_CREATE_FAILED, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	//Send back the ID for this browser
@@ -2334,7 +2314,7 @@ STDMETHODIMP CvbWB::get_ObjectWB(short wbUID, LPDISPATCH *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return hret;
 }
 
@@ -2356,7 +2336,7 @@ STDMETHODIMP CvbWB::get_ContextMenuAction(short wbUID, long *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	
 	return S_OK;
 }
@@ -2380,13 +2360,12 @@ STDMETHODIMP CvbWB::put_ContextMenuAction(short wbUID, long newVal)
 			}
 		}
 		else
-			return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	}
 	else
 	{
-		m_StrErr_Tmp = (UINT)IDS_ACCEL_PROP_ERR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_ACCEL_PROP_ERR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	return S_OK;
 }
@@ -2407,7 +2386,7 @@ STDMETHODIMP CvbWB::get_DocumentDownloadControlFlags(short wbUID, long *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	
 	return S_OK;
 }
@@ -2429,7 +2408,7 @@ STDMETHODIMP CvbWB::put_DocumentDownloadControlFlags(short wbUID, long newVal)
 			}
 		}
 		else
-			return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 }
@@ -2450,7 +2429,7 @@ STDMETHODIMP CvbWB::get_DocumentHostUiFlags(short wbUID, long *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	
 	return S_OK;
 }
@@ -2472,7 +2451,7 @@ STDMETHODIMP CvbWB::put_DocumentHostUiFlags(short wbUID, long newVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 }
@@ -2493,7 +2472,7 @@ STDMETHODIMP CvbWB::get_DocumentHostUiDoubleClickAction(short wbUID, long *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	
 	return S_OK;
 }
@@ -2517,13 +2496,12 @@ STDMETHODIMP CvbWB::put_DocumentHostUiDoubleClickAction(short wbUID, long newVal
 			}
 		}
 		else
-			return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	}
 	else
 	{
-		m_StrErr_Tmp = (UINT)IDS_PROP_VALUE_ERR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_PROP_VALUE_ERR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	return S_OK;
 }
@@ -2544,12 +2522,11 @@ STDMETHODIMP CvbWB::FindTextSimple(short wbUID,BSTR TextToFind,VARIANT_BOOL bDow
 		}
 		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_BROWSEROBJ;
-			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_NO_BROWSEROBJ, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 }
@@ -2566,12 +2543,11 @@ HRESULT CvbWB::FindAndHighlightAllTextFrames(short wbUID, BSTR TextToFind, VARIA
 		}
 		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_BROWSEROBJ;
-			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_NO_BROWSEROBJ, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 
 	return S_OK;
@@ -2589,12 +2565,11 @@ STDMETHODIMP CvbWB::FindAndHighlightAllText(short wbUID,BSTR TextToFind, VARIANT
 		}
 		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_BROWSEROBJ;
-			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_NO_BROWSEROBJ, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 
 	return S_OK;
@@ -2614,12 +2589,11 @@ STDMETHODIMP CvbWB::FindAnyTextMatch( short wbUID, BSTR TextToFind, VARIANT_BOOL
  		}
  		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_BROWSEROBJ;
- 			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+ 			return AtlReportError(CLSID_vbWB, IDS_NO_BROWSEROBJ, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else
- 		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+ 		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -2637,12 +2611,11 @@ STDMETHODIMP CvbWB::get_IsDocFrameset(short wbUID, VARIANT_BOOL *pVal)
  		}
  		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_BROWSEROBJ;
- 			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+ 			return AtlReportError(CLSID_vbWB, IDS_NO_BROWSEROBJ, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else
- 		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+ 		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -2964,8 +2937,7 @@ STDMETHODIMP CvbWB::RegisterHTTPSprotocol(VARIANT_BOOL pVal)
 {
 	if( (pVal == VARIANT_TRUE) && (gb_IsHttpsRegistered == TRUE) )
 	{
-		m_StrErr_Tmp = (UINT)IDS_HTTPS_PROT_REGISTERED;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_HTTPS_PROT_REGISTERED, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	
 	//Get the current InternetSession
@@ -2993,8 +2965,7 @@ STDMETHODIMP CvbWB::RegisterHTTPprotocol(VARIANT_BOOL pVal)
 {
 	if( (pVal == VARIANT_TRUE) && (gb_IsHttpRegistered == TRUE) )
 	{
-		m_StrErr_Tmp = (UINT)IDS_HTTP_PROT_REGISTERED;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_HTTP_PROT_REGISTERED, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	
 	//Get the current InternetSession
@@ -3032,8 +3003,7 @@ STDMETHODIMP CvbWB::DownloadUrlAsync( BSTR URL, BSTR SaveFileName, short *DLUID)
 	WBBSCBFileDL *pBSCB = new WBBSCBFileDL(m_dluid);
 	if(!pBSCB)
 	{
-		m_StrErr_Tmp = (UINT)IDS_NO_DLMANAGER;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_DLMANAGER, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	//Pass uid to client to be used to cancel a dl
@@ -3046,8 +3016,7 @@ STDMETHODIMP CvbWB::DownloadUrlAsync( BSTR URL, BSTR SaveFileName, short *DLUID)
 	if(FAILED(hr))
 	{
 		delete pBSCB;
-		m_StrErr_Tmp = (UINT)IDS_NO_URLMONIKOR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_URLMONIKOR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	
 	//Create BindCtx and register BSCB at the same time, AddRef is called
@@ -3055,25 +3024,19 @@ STDMETHODIMP CvbWB::DownloadUrlAsync( BSTR URL, BSTR SaveFileName, short *DLUID)
 	if(FAILED(hr))
 	{
 		delete pBSCB;
-		if(pmk) pmk.Release();
-		m_StrErr_Tmp = (UINT)IDS_NO_ASYNCBINDCTX;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_ASYNCBINDCTX, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	
 	//Bind stream to storage
-	hr = pmk->BindToStorage(pbc,NULL,IID_IStream,(void**)&pstm);
+	hr = pmk->BindToStorage(pbc,NULL, IID_IStream,(void**)&pstm);
 	if(FAILED(hr))
 	{
-		if(pbc) pbc.Release();
 		delete pBSCB;
-		if(pmk) pmk.Release();
-		m_StrErr_Tmp = (UINT)IDS_BINDTOSTORAGE_FAILED;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_BINDTOSTORAGE_FAILED, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	//Add to Ptrarray
 	m_arrDL.Add(pBSCB);
 	return S_OK;
-
 }
 
 /* Another method to display SSL certificate
@@ -3105,18 +3068,16 @@ STDMETHODIMP CvbWB::DisplayCertificateDialog(short wbUID)
 			}
 			else
 			{
-				m_StrErr_Tmp = (UINT)IDS_SSLCMD_FAILED;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_SSLCMD_FAILED, IID_IvbWB, DISP_E_EXCEPTION);
 			}
  		}
  		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_BROWSEROBJ;
- 			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+ 			return AtlReportError(CLSID_vbWB, IDS_NO_BROWSEROBJ, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else
- 		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+ 		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -3166,12 +3127,11 @@ STDMETHODIMP CvbWB::LoadHTMLFromString( short wbUID, BSTR sContent, BSTR sBaseUr
  		}
  		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_BROWSEROBJ;
- 			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+ 			return AtlReportError(CLSID_vbWB, IDS_NO_BROWSEROBJ, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else
- 		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+ 		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -3289,20 +3249,17 @@ if(iehwnd)
 				case S_OK:
 					break;
 				case OLE_E_BLANK:
-					return AtlReportError(CLSID_vbWB, _T("OLE_E_BLANK") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("OLE_E_BLANK"), IID_IvbWB, DISP_E_EXCEPTION);
 				case VIEW_E_DRAW:
-					return AtlReportError(CLSID_vbWB, _T("VIEW_E_DRAW") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("VIEW_E_DRAW"), IID_IvbWB, DISP_E_EXCEPTION);
 				case DV_E_LINDEX:
-					return AtlReportError(CLSID_vbWB, _T("DV_E_LINDEX") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("DV_E_LINDEX"), IID_IvbWB, DISP_E_EXCEPTION);
 				case DV_E_DVASPECT:
-					return AtlReportError(CLSID_vbWB, _T("DV_E_DVASPECT") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("DV_E_DVASPECT"), IID_IvbWB, DISP_E_EXCEPTION);
 				case OLE_E_INVALIDRECT:
-					return AtlReportError(CLSID_vbWB, _T("OLE_E_INVALIDRECT") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("OLE_E_INVALIDRECT"), IID_IvbWB, DISP_E_EXCEPTION);
 				default:
-					{
-						m_StrErr_Tmp = (UINT)IDS_DRAWOP_ABORTED;
-						return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
-					}
+					return AtlReportError(CLSID_vbWB, IDS_DRAWOP_ABORTED, IID_IvbWB, DISP_E_EXCEPTION);
 				}
 				
 				//Replaced with StretchBlt
@@ -3316,23 +3273,20 @@ if(iehwnd)
 			}
 			else
 			{
-				m_StrErr_Tmp = (UINT)IDS_NO_IVIEWOBJ;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_NO_IVIEWOBJ, IID_IvbWB, DISP_E_EXCEPTION);
 			}
  		}
  		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_BROWSEROBJ;
- 			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+ 			return AtlReportError(CLSID_vbWB, IDS_NO_BROWSEROBJ, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else
- 		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+ 		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 
 ReturnError:
-	m_StrErr_Tmp = (UINT)IDS_NO_ACTIVEDOC;
-	return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+	return AtlReportError(CLSID_vbWB, IDS_NO_ACTIVEDOC, IID_IvbWB, DISP_E_EXCEPTION);
 }
 
 STDMETHODIMP CvbWB::get_WBPageTextSize(short wbUID, long *pVal)
@@ -3354,15 +3308,14 @@ STDMETHODIMP CvbWB::get_WBPageTextSize(short wbUID, long *pVal)
 							OLECMDEXECOPT_DONTPROMPTUSER, NULL, &vaZoomFactor)) )
 			{
 				VariantClear(&vaZoomFactor);
-				m_StrErr_Tmp = (UINT)IDS_NO_FONTSIZE;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_NO_FONTSIZE, IID_IvbWB, DISP_E_EXCEPTION);
 			}
 			*pVal = (long)V_I4(&vaZoomFactor);
 			VariantClear(&vaZoomFactor);
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	
 	return S_OK;
 }
@@ -3370,7 +3323,7 @@ STDMETHODIMP CvbWB::get_WBPageTextSize(short wbUID, long *pVal)
 STDMETHODIMP CvbWB::put_WBPageTextSize( short wbUID, long newVal)
 {
 	if( (newVal < 0) || (newVal > 4))
-		return AtlReportError(CLSID_vbWB, _T("PageTextSize acceptable values 0 to 4.") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("PageTextSize acceptable values 0 to 4."), IID_IvbWB, DISP_E_EXCEPTION);
 	if(wbUID <= 0)
 	{
 		m_TextZoomVal = newVal;
@@ -3391,13 +3344,12 @@ STDMETHODIMP CvbWB::put_WBPageTextSize( short wbUID, long newVal)
 			VariantClear(&vaZoomFactor);
 			if(FAILED(hr))
 			{
-				m_StrErr_Tmp = (UINT)IDS_NO_FONTSIZE_SET;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_NO_FONTSIZE_SET, IID_IvbWB, DISP_E_EXCEPTION);
 			}
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 }
@@ -3431,8 +3383,7 @@ STDMETHODIMP CvbWB::SubclassWnd(long hwndWnd)
 {
 	if(hwndWnd <= 0 )
 	{
-		m_StrErr_Tmp = (UINT)IDS_NO_HWND_ERR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_HWND_ERR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	HWND hwnd = (HWND) hwndWnd;
 	if( (hwnd) && (::IsWindow(hwnd)) )
@@ -3447,15 +3398,13 @@ STDMETHODIMP CvbWB::SubclassWnd(long hwndWnd)
 			else
 			{
 				delete cSubclasser;
-				m_StrErr_Tmp = (UINT)IDS_NO_SUBCLASS_ERR;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_NO_SUBCLASS_ERR, IID_IvbWB, DISP_E_EXCEPTION);
 			}
 		}
 	}
 	else
 	{
-		m_StrErr_Tmp = (UINT)IDS_NO_HWND_ERR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_HWND_ERR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	return S_OK;
 }
@@ -3464,8 +3413,7 @@ STDMETHODIMP CvbWB::UnSubclassWnd(long hwndWnd)
 {
 	if(hwndWnd <= 0 )
 	{
-		m_StrErr_Tmp = (UINT)IDS_NO_HWND_ERR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_HWND_ERR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	HWND hwnd = (HWND) hwndWnd;
 	if( (hwnd) && (::IsWindow(hwnd)) )
@@ -3479,8 +3427,7 @@ STDMETHODIMP CvbWB::UnSubclassWnd(long hwndWnd)
 		}
 		if(i >= isize )
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_HWND_SUBCLASSED;
-			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_NO_HWND_SUBCLASSED, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 		m_Subclassed[i]->StopSubClassing(hwnd);
 		delete m_Subclassed[i];
@@ -3489,8 +3436,7 @@ STDMETHODIMP CvbWB::UnSubclassWnd(long hwndWnd)
 	}
 	else
 	{
-		m_StrErr_Tmp = (UINT)IDS_NO_HWND_ERR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_HWND_ERR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	return S_OK;
@@ -3500,8 +3446,7 @@ STDMETHODIMP CvbWB::AddMessage(long hwndWnd, long lMsg)
 {
 	if(hwndWnd <= 0 )
 	{
-		m_StrErr_Tmp = (UINT)IDS_NO_HWND_ERR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_HWND_ERR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	HWND hwnd = (HWND) hwndWnd;
 	if( (hwnd) && (::IsWindow(hwnd)) )
@@ -3515,15 +3460,13 @@ STDMETHODIMP CvbWB::AddMessage(long hwndWnd, long lMsg)
 		}
 		if(i >= isize )
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_HWND_SUBCLASSED;
-			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_NO_HWND_SUBCLASSED, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 		m_Subclassed[i]->AddSubclassMsg((UINT)lMsg);
 	}
 	else
 	{
-		m_StrErr_Tmp = (UINT)IDS_NO_HWND_ERR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_HWND_ERR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	return S_OK;
@@ -3534,16 +3477,14 @@ STDMETHODIMP CvbWB::SetupShellAutoComplete(long hwndTarget, VARIANT_BOOL IsTarge
 #ifndef _WIN32_WCE
 	if(hwndTarget <= 0)
 	{
-		m_StrErr_Tmp = (UINT)IDS_NO_HWND_ERR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);;
+		return AtlReportError(CLSID_vbWB, IDS_NO_HWND_ERR, IID_IvbWB, DISP_E_EXCEPTION);;
 	}
 	
 	if(CAutoCompleter::ShellAutoComplete((HWND)hwndTarget, VARIANTBOOLTOBOOL(IsTargetComboBox), (DWORD)lFlags))
 		return S_OK;
 	else
 	{
-		m_StrErr_Tmp = (UINT)IDS_SHAUTOCOMPLET_CALLFAILED;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_SHAUTOCOMPLET_CALLFAILED, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 #else
 	return S_OK;
@@ -3682,20 +3623,17 @@ STDMETHODIMP CvbWB::SaveAsBitmap(short wbUID, BSTR BitmapName)
 				case S_OK:
 					break;
 				case OLE_E_BLANK:
-					return AtlReportError(CLSID_vbWB, _T("OLE_E_BLANK") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("OLE_E_BLANK"), IID_IvbWB, DISP_E_EXCEPTION);
 				case VIEW_E_DRAW:
-					return AtlReportError(CLSID_vbWB, _T("VIEW_E_DRAW") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("VIEW_E_DRAW"), IID_IvbWB, DISP_E_EXCEPTION);
 				case DV_E_LINDEX:
-					return AtlReportError(CLSID_vbWB, _T("DV_E_LINDEX") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("DV_E_LINDEX"), IID_IvbWB, DISP_E_EXCEPTION);
 				case DV_E_DVASPECT:
-					return AtlReportError(CLSID_vbWB, _T("DV_E_DVASPECT") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("DV_E_DVASPECT"), IID_IvbWB, DISP_E_EXCEPTION);
 				case OLE_E_INVALIDRECT:
-					return AtlReportError(CLSID_vbWB, _T("OLE_E_INVALIDRECT") ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, _T("OLE_E_INVALIDRECT"), IID_IvbWB, DISP_E_EXCEPTION);
 				default:
-					{
-						m_StrErr_Tmp = (UINT)IDS_DRAWOP_ABORTED;
-						return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
-					}
+					return AtlReportError(CLSID_vbWB, IDS_DRAWOP_ABORTED, IID_IvbWB, DISP_E_EXCEPTION);
 				}
 				
 				//Create a bitmapinfo struct
@@ -3712,30 +3650,26 @@ STDMETHODIMP CvbWB::SaveAsBitmap(short wbUID, BSTR BitmapName)
 				//Did we succeed
 				if (bOk == FALSE)
 				{
-					m_StrErr_Tmp = (UINT)IDS_UNABLE_TOSAVE_BMP;
-					return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+					return AtlReportError(CLSID_vbWB, IDS_UNABLE_TOSAVE_BMP, IID_IvbWB, DISP_E_EXCEPTION);
 				}
 			}
 			else
 			{
-				m_StrErr_Tmp = (UINT)IDS_NO_IVIEWOBJ;
-				return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+				return AtlReportError(CLSID_vbWB, IDS_NO_IVIEWOBJ, IID_IvbWB, DISP_E_EXCEPTION);
 			}
 		}
  		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_NO_BROWSEROBJ;
- 			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+ 			return AtlReportError(CLSID_vbWB, IDS_NO_BROWSEROBJ, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 
 ReturnError:
-	m_StrErr_Tmp = (UINT)IDS_NO_DOCOBJECT;
-	return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+	return AtlReportError(CLSID_vbWB, IDS_NO_DOCOBJECT, IID_IvbWB, DISP_E_EXCEPTION);
 }
 
 //If using POST, make sure that server supports it.
@@ -3755,14 +3689,13 @@ STDMETHODIMP CvbWB::WBPostData(BSTR sURL, BSTR sData, short *PostID)
 {
 	CComPtr<IMoniker> pmk;
 	CComPtr<IBindCtx> pbc;
-    LPSTREAM pstm = NULL;
+    LPSTREAM pstm = NULL; // TODO: Does this leak?
     HRESULT hr;
 
 	WBBSCBPost *pPost = new WBBSCBPost();
 	if(!pPost)
 	{
-		m_StrErr_Tmp = (UINT)IDS_UNABLE_TOCREATE_CLASS;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_UNABLE_TOCREATE_CLASS, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	m_dluid++;
 	USES_CONVERSION;
@@ -3775,8 +3708,7 @@ STDMETHODIMP CvbWB::WBPostData(BSTR sURL, BSTR sData, short *PostID)
 	if( FAILED(hr) )
 	{
 		delete pPost;
-		m_StrErr_Tmp = (UINT)IDS_UNABLE_TOINIT_CLASS;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp, IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_UNABLE_TOINIT_CLASS, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	
 	//Create URLMonikor
@@ -3784,8 +3716,7 @@ STDMETHODIMP CvbWB::WBPostData(BSTR sURL, BSTR sData, short *PostID)
 	if(FAILED(hr))
 	{
 		delete pPost;
-		m_StrErr_Tmp = (UINT)IDS_NO_URLMONIKOR;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_URLMONIKOR, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	
 	//Create BindCtx and register BSCB at the same time
@@ -3793,20 +3724,15 @@ STDMETHODIMP CvbWB::WBPostData(BSTR sURL, BSTR sData, short *PostID)
 	if(FAILED(hr))
 	{
 		delete pPost;
-		if(pmk) pmk.Release();
-		m_StrErr_Tmp = (UINT)IDS_NO_ASYNCBINDCTX;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_NO_ASYNCBINDCTX, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	
 	//Bind stream to storage
-	hr = pmk->BindToStorage(pbc,NULL,IID_IStream,(void**)&pstm);
+	hr = pmk->BindToStorage(pbc,NULL, IID_IStream,(void**)&pstm);
 	if(FAILED(hr))
 	{
-		if(pbc) pbc.Release();
 		delete pPost;
-		if(pmk) pmk.Release();
-		m_StrErr_Tmp = (UINT)IDS_BINDTOSTORAGE_FAILED;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_BINDTOSTORAGE_FAILED, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	*PostID = m_dluid;
@@ -3834,7 +3760,7 @@ STDMETHODIMP CvbWB::get_SourceOnDocComplete(short wbUID, VARIANT_BOOL *pVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -3855,7 +3781,7 @@ STDMETHODIMP CvbWB::put_SourceOnDocComplete(short wbUID, VARIANT_BOOL newVal)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -3898,7 +3824,7 @@ STDMETHODIMP CvbWB::ViewIEOptions(short wbUID)
 		}
 	}
 	else
-		return AtlReportError(CLSID_vbWB, m_StrErr_WBNOTFOUND,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_WB_NOT_FOUND, IID_IvbWB, DISP_E_EXCEPTION);
 	return S_OK;
 }
 
@@ -3964,8 +3890,7 @@ STDMETHODIMP CvbWB::SetupWindowsHook(WINDOWSHOOK_TYPES lHookType, long hwndTarge
 		}
 		else
 		{
-			m_StrErr_Tmp = (UINT)IDS_FAILEDTOINSTALLHOOK;
-			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+			return AtlReportError(CLSID_vbWB, IDS_FAILEDTOINSTALLHOOK, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 	}
 	else if( (bInstall == FALSE) && (wbhookdata[lHookType].bHookInstalled == TRUE) )
@@ -3984,7 +3909,7 @@ STDMETHODIMP CvbWB::SetupCustomAutoComplete(long hwndTarget,VARIANT_BOOL IsTarge
 #ifndef _WIN32_WCE
 	if( varStringArray->vt != (VT_ARRAY | VT_BSTR) )
 	{
-		return AtlReportError(CLSID_vbWB, _T("varStringArray parameter must be a valid string array") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("varStringArray parameter must be a valid string array"), IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	long lBound = 0;
@@ -3995,13 +3920,13 @@ STDMETHODIMP CvbWB::SetupCustomAutoComplete(long hwndTarget,VARIANT_BOOL IsTarge
 	hresult = SafeArrayGetLBound(psa, 1, &lBound);
 	if(FAILED(hresult))
 	{
-		return AtlReportError(CLSID_vbWB, _T("varStringArray parameter can not be empty!") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("varStringArray parameter can not be empty!"), IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	hresult = SafeArrayGetUBound(psa, 1, &uBound);
 	if( (FAILED(hresult)) || (uBound == 0) )
 	{
-		return AtlReportError(CLSID_vbWB, _T("varStringArray parameter can not be empty!") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("varStringArray parameter can not be empty!"), IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	BSTR HUGEP *pbstr;
@@ -4010,8 +3935,7 @@ STDMETHODIMP CvbWB::SetupCustomAutoComplete(long hwndTarget,VARIANT_BOOL IsTarge
 
 	if(!cac)
 	{
-		m_StrErr_Tmp = (UINT)IDS_FAILEDTOCREATEAC;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION); //5th override
+		return AtlReportError(CLSID_vbWB, IDS_FAILEDTOCREATEAC, IID_IvbWB, DISP_E_EXCEPTION); //5th override
 	}
 
 	//Get a pointer to the elements of the array.
@@ -4019,7 +3943,7 @@ STDMETHODIMP CvbWB::SetupCustomAutoComplete(long hwndTarget,VARIANT_BOOL IsTarge
 	if(FAILED(hresult))
 	{
 		delete cac;
-		return AtlReportError(CLSID_vbWB, _T("Unable to access safearray descriptor.") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("Unable to access safearray descriptor."), IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	for(int i = lBound; i <= uBound; i++)
@@ -4039,8 +3963,7 @@ STDMETHODIMP CvbWB::SetupCustomAutoComplete(long hwndTarget,VARIANT_BOOL IsTarge
 		if(!bRet)
 		{
 			delete cac;
-			m_StrErr_Tmp = (UINT)IDS_ACBINDINGFAILED;
-			return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION); 
+			return AtlReportError(CLSID_vbWB, IDS_ACBINDINGFAILED, IID_IvbWB, DISP_E_EXCEPTION);
 		}
 		//Add to our array of autocompleters
 		//to add strings, enable, or disable
@@ -4049,8 +3972,7 @@ STDMETHODIMP CvbWB::SetupCustomAutoComplete(long hwndTarget,VARIANT_BOOL IsTarge
 	else
 	{
 		delete cac;
-		m_StrErr_Tmp = (UINT)IDS_ACLISTEMPTY;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_ACLISTEMPTY, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 #endif
 	return S_OK;
@@ -4065,8 +3987,7 @@ STDMETHODIMP CvbWB::CustomAutoCompleteAddString(long hwndTarget,VARIANT_BOOL IsT
 	int iSize = m_AutoCompleters.GetSize();
 	if(iSize == 0)
 	{
-		m_StrErr_Tmp = (UINT)IDS_EMPTYACARRAY;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_EMPTYACARRAY, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	for(int i = 0; i < iSize ; i++)
@@ -4086,8 +4007,7 @@ STDMETHODIMP CvbWB::CustomAutoCompleteAddString(long hwndTarget,VARIANT_BOOL IsT
 		}
 	}
 	//Nothing
-	m_StrErr_Tmp = (UINT)IDS_UNABLETOFINDAC;
-	return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+	return AtlReportError(CLSID_vbWB, IDS_UNABLETOFINDAC, IID_IvbWB, DISP_E_EXCEPTION);
 #else
 	return S_OK;
 #endif
@@ -4103,8 +4023,7 @@ STDMETHODIMP CvbWB::CustomAutoCompleteEnable(long hwndTarget, VARIANT_BOOL IsTar
 	int iSize = m_AutoCompleters.GetSize();
 	if(iSize == 0)
 	{
-		m_StrErr_Tmp = (UINT)IDS_EMPTYACARRAY;
-		return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, IDS_EMPTYACARRAY, IID_IvbWB, DISP_E_EXCEPTION);
 	}
 
 	for(int i = 0; i < iSize ; i++)
@@ -4130,8 +4049,7 @@ STDMETHODIMP CvbWB::CustomAutoCompleteEnable(long hwndTarget, VARIANT_BOOL IsTar
 		}
 	}
 	//Nothing
-	m_StrErr_Tmp = (UINT)IDS_UNABLETOFINDAC;
-	return AtlReportError(CLSID_vbWB, m_StrErr_Tmp ,IID_IvbWB,DISP_E_EXCEPTION);
+	return AtlReportError(CLSID_vbWB, IDS_UNABLETOFINDAC, IID_IvbWB, DISP_E_EXCEPTION);
 #else
 	return S_OK;
 #endif
@@ -4160,7 +4078,7 @@ STDMETHODIMP CvbWB::QueryIERegistryOption( long IeRegistryOptionsFlag, VARIANT *
 	hret = reg.Open(HKEY_CURRENT_USER, _T("Software\\Microsoft\\Internet Explorer\\Main"));
 	//Check for suceess
 	if(hret != ERROR_SUCCESS)
-		return AtlReportError(CLSID_vbWB, _T("Unable to open Software\\Microsoft\\Internet Explorer\\Main key.") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("Unable to open Software\\Microsoft\\Internet Explorer\\Main key."), IID_IvbWB, DISP_E_EXCEPTION);
 
 	LPTSTR pbuf = (LPTSTR)new TCHAR[MAX_PATH + 1];
 	if(pbuf)
@@ -4169,7 +4087,7 @@ STDMETHODIMP CvbWB::QueryIERegistryOption( long IeRegistryOptionsFlag, VARIANT *
 		pbuf[MAX_PATH] = _T('\0');
 	}
 	else
-		return AtlReportError(CLSID_vbWB, _T("Unable to allocate a buffer.") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("Unable to allocate a buffer."), IID_IvbWB, DISP_E_EXCEPTION);
 
 	CComBSTR sRet;
 	USES_CONVERSION;
@@ -4239,7 +4157,7 @@ STDMETHODIMP CvbWB::QueryIERegistryOption( long IeRegistryOptionsFlag, VARIANT *
 		//Reset type
 		varBuffer->vt = VT_EMPTY;
 		delete [] pbuf;
-		return AtlReportError(CLSID_vbWB, _T("Unable to query for the value.") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("Unable to query for the value."), IID_IvbWB, DISP_E_EXCEPTION);
 	}
 	return S_OK;
 }
@@ -4255,11 +4173,11 @@ STDMETHODIMP CvbWB::SetIERegistryOption( long IeRegistryOptionsFlag, VARIANT * v
 	hret = reg.Open(HKEY_CURRENT_USER, _T("Software\\Microsoft\\Internet Explorer\\Main"));
 	//Check for suceess
 	if(hret != ERROR_SUCCESS)
-		return AtlReportError(CLSID_vbWB, _T("Unable to open Software\\Microsoft\\Internet Explorer\\Main key.") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("Unable to open Software\\Microsoft\\Internet Explorer\\Main key."), IID_IvbWB, DISP_E_EXCEPTION);
 
 	CTmpBuffer buf;
 	if(buf.AppendBSTR(varBuffer->bstrVal, ::SysStringLen(varBuffer->bstrVal)) == 0)
-		return AtlReportError(CLSID_vbWB, _T("Unable to allocate required buffer.") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("Unable to allocate required buffer."), IID_IvbWB, DISP_E_EXCEPTION);
 
 	switch(IeRegistryOptionsFlag)
 	{
@@ -4313,7 +4231,7 @@ STDMETHODIMP CvbWB::SetIERegistryOption( long IeRegistryOptionsFlag, VARIANT * v
 	}
 
 	if(hret != ERROR_SUCCESS)
-		return AtlReportError(CLSID_vbWB, _T("Unable to set registry value.") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("Unable to set registry value."), IID_IvbWB, DISP_E_EXCEPTION);
 
 	return S_OK;
 }
@@ -4352,7 +4270,7 @@ STDMETHODIMP CvbWB::DeleteIEFiles(DELETE_IE_FILES_FLAGS enumWhichFiles)
 	if(SUCCEEDED(hr))
 		return hr;
 	else
-		return AtlReportError(CLSID_vbWB, _T("Unable to Delete IE Files.") ,IID_IvbWB,DISP_E_EXCEPTION);
+		return AtlReportError(CLSID_vbWB, _T("Unable to Delete IE Files."), IID_IvbWB, DISP_E_EXCEPTION);
 }
 
 #ifndef _WIN32_WCE
@@ -6100,7 +6018,7 @@ long WBDropTarget::DetermineEffect(DWORD dwEffects)
 	}
 	else if( (dwEffects & DROPEFFECT_SCROLL) == DROPEFFECT_SCROLL)
 	{
-		lRet = static_cast<long>(DROPEFFECT_SCROLL);
+		lRet = DROPEFFECT_SCROLL;
 	}
 
 	return lRet;
@@ -7939,7 +7857,7 @@ STDMETHODIMP WBDocHostShowUI::ShowHelp(HWND hwnd,LPOLESTR pszHelpFile,
 	//Create monikor
 	CreateURLMoniker(NULL, bstrPath, &pUrlMoniker);
 
-	HRESULT hr = CoCreateInstance(CLSID_HostDialogHelper,NULL,CLSCTX_INPROC,IID_IHostDialogHelper,(void**)(&pHDH));
+	HRESULT hr = CoCreateInstance(CLSID_HostDialogHelper,NULL,CLSCTX_INPROC, IID_IHostDialogHelper,(void**)(&pHDH));
 	if(SUCCEEDED(hr))
 	{
 		//Show HTML dialog
@@ -8617,8 +8535,8 @@ STDMETHODIMP WBBSCBFileDL::OnStopBinding(HRESULT hresult,LPCWSTR szError)
 			CTmpBuffer buff(MAX_PATH);
 			buff += W2CT(szError);
 			//buff += _T(" Error Number = ");
-			buff.AppendResStr((UINT)IDS_ERROR_NUMBER);
-			buff.Appendlong(static_cast<long>(hresult));
+			buff.AppendResStr(IDS_ERROR_NUMBER);
+			buff.Appendlong(hresult);
 			CComBSTR sMsg;
 			sMsg.Append(buff);
 			m_Events->Fire_OnFileDLDownloadError(m_Uid, fUrl, sMsg);
@@ -8962,7 +8880,7 @@ void WBBSCBFileDL::ResetInternalVars(void)
 	m_fRedirect = FALSE;
 	m_pBinding = NULL;
 	m_pstm = NULL;
-	m_cbOld = DW_ZERO;
+	m_cbOld = 0;
 	hFile = INVALID_HANDLE_VALUE;
 
 	m_pHost = NULL;
@@ -9675,8 +9593,8 @@ STDMETHODIMP WBBSCBPost::OnStopBinding(HRESULT hresult,LPCWSTR szError)
 			CTmpBuffer buff(MAX_PATH);
 			buff += W2CT(szError);
 			//buff += _T(" Error Number = ");
-			buff.AppendResStr((UINT)IDS_ERROR_NUMBER);
-			buff.Appendlong(static_cast<long>(hresult));
+			buff.AppendResStr(IDS_ERROR_NUMBER);
+			buff.Appendlong(hresult);
 			CComBSTR sMsg;
 			sMsg.Append(buff);
 			m_Events->Fire_OnPostError(m_Uid, fUrl, sMsg);
@@ -10100,8 +10018,8 @@ STDMETHODIMP WBBSCBUpload::OnStopBinding(HRESULT hresult,LPCWSTR szError)
 			USES_CONVERSION;
 			CTmpBuffer buff(MAX_PATH);
 			buff += W2CT(szError);
-			buff.AppendResStr((UINT)IDS_ERROR_NUMBER);
-			buff.Appendlong(static_cast<long>(hresult));
+			buff.AppendResStr(IDS_ERROR_NUMBER);
+			buff.Appendlong(hresult);
 			CComBSTR sMsg;
 			sMsg.Append(buff);
 			//m_Events->Fire_OnUploadError(m_Uid, fUrl, sMsg);
@@ -11346,7 +11264,7 @@ with the OPEN_ALWAYS flag.
 		//Move pointer to the end of file, if we have anything
 		if(dwSize > 0)
 		{
-			if (SetFilePointer(hFile, 0, NULL, FILE_END) == NO_FILE)
+			if (SetFilePointer(hFile, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER)
 			{
 				//Alert(_T("UNABLE-TO-SET-FILEPOINTER-ERROR_vbLog"));
 				return 0;
@@ -11360,14 +11278,14 @@ with the OPEN_ALWAYS flag.
 	//How much to write
 	DWORD dwHeader  = lstrlen(szHeader);
 	DWORD dwWrite = lstrlen(szData);
-	DWORD dwWritten = DW_ZERO;
+	DWORD dwWritten = 0;
 
 	DWORD dwCrLf = lstrlen(vbCrLf);
 	const LPCTSTR vbCrLf1 = _T("\r\n\r\n");
 	DWORD dwCrLf1 = lstrlen(vbCrLf1);
 
 	//Write to file
-	if (dwWrite > DW_ZERO)
+	if (dwWrite > 0)
 	{
 		WriteFile(hFile, szHeader, dwHeader, &dwWritten, NULL); //Print header
 		WriteFile(hFile, vbCrLf, dwCrLf, &dwWritten, NULL);     //Print a \r\n
@@ -11375,11 +11293,6 @@ with the OPEN_ALWAYS flag.
 		WriteFile(hFile, vbCrLf1, dwCrLf1, &dwWritten, NULL);   //print \n\r\n\r
 	}
 	CloseHandle(hFile);
-	hFile = INVALID_HANDLE_VALUE;
-	dwWrite = DW_ZERO;
-	dwWritten = DW_ZERO;
-	dwCrLf = DW_ZERO;
-	dwCrLf1 = DW_ZERO;
 	return (int)dwWritten;
 }
 
