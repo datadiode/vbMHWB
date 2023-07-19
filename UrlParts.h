@@ -63,8 +63,6 @@ public:
 	void ResetBuffers();
 
 private:
-	bool Allocated;
-
 	LPTSTR szScheme;
 	LPTSTR szHostName;
 	LPTSTR szUserName;

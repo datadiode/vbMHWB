@@ -11,7 +11,6 @@
 
 CUrlParts::CUrlParts()
 {
-	Allocated = false;
 	szScheme = NULL;
 	szHostName = NULL;
 	szUserName = NULL;
@@ -39,7 +38,7 @@ CUrlParts::~CUrlParts()
 
 void CUrlParts::ResetBuffers()
 {
-	if(Allocated == true)
+	if(szScheme)
 	{
 		free(szScheme);
 		szScheme = NULL;
@@ -60,13 +59,11 @@ void CUrlParts::ResetBuffers()
 		dwFileExtension = 0;
 		dwPort = 0;
 	}
-	Allocated = false;
 }
 
 bool CUrlParts::AllocateBuffers(int iNum)
 {
-	if(Allocated == true)
-		ResetBuffers();
+	ResetBuffers();
 	LPTSTR lpstrHeap = szScheme = (LPTSTR) malloc((iNum + 1) * sizeof(TCHAR) * 8);
 	//Check
 	if(!szScheme)
