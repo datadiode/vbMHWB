@@ -602,6 +602,11 @@ LRESULT CvbWB::OnSetFocus(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandle
 	return lRes;
 }
 
+LRESULT CvbWB::OnDispInvoke(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+	return reinterpret_cast<CDispInvoke *>(lParam)->Invoke();
+}
+
 BOOL CvbWB::FindWBHost(HWND hIEServer, IWB **ppHost)
 {
 	BOOL bret = FALSE;

@@ -458,6 +458,54 @@ if(varbstrarr.ItemsCount() > 0)
 }
 
 */
+
+class CDispInvoke
+{
+public:
+	static UINT const WM_DISPINVOKE = WM_APP + 1;
+	CDispInvoke
+	(
+		IDispatch *p,
+		DISPID dispidMember,
+		REFIID riid,
+		LCID lcid,
+		WORD wFlags,
+		DISPPARAMS *pdispparams,
+		VARIANT *pvarResult,
+		EXCEPINFO *pexcepinfo,
+		UINT *puArgErr
+	)
+	: p(p)
+	, dispidMember(dispidMember)
+	, riid(riid)
+	, lcid(lcid)
+	, wFlags(wFlags)
+	, pdispparams(pdispparams)
+	, pvarResult(pvarResult)
+	, pexcepinfo(pexcepinfo)
+	, puArgErr(puArgErr)
+	{
+	}
+	LRESULT Invoke()
+	{
+		return p->Invoke(dispidMember, riid, lcid, wFlags, pdispparams, pvarResult, pexcepinfo, puArgErr);
+	}
+	HRESULT Invoke(HWND hwnd)
+	{
+		return static_cast<HRESULT>(SendMessage(hwnd, WM_DISPINVOKE, 0, reinterpret_cast<LPARAM>(this)));
+	}
+private:
+	IDispatch *const p;
+	DISPID const dispidMember;
+	REFIID const riid;
+	LCID const lcid;
+	WORD const wFlags;
+	DISPPARAMS *const pdispparams;
+	VARIANT *const pvarResult;
+	EXCEPINFO *const pexcepinfo;
+	UINT *const puArgErr;
+};
+
 class CVariantBSTRArray
 {
 public:
@@ -626,6 +674,7 @@ END_CONNECTION_POINT_MAP()
 BEGIN_MSG_MAP(CvbWB)
 	//MESSAGE_HANDLER(WM_CREATE, OnCreate)
 	CHAIN_MSG_MAP(CComControl<CvbWB>)
+	MESSAGE_HANDLER(CDispInvoke::WM_DISPINVOKE, OnDispInvoke)
 	MESSAGE_HANDLER(WM_SIZE, OnSize)
 	MESSAGE_HANDLER(WM_SETFOCUS, OnSetFocus)
 	MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
@@ -636,6 +685,21 @@ END_MSG_MAP()
 //  LRESULT NotifyHandler(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 
 	HRESULT IPersistStreamInit_Load(LPSTREAM, ATL_PROPMAP_ENTRY const *) { return S_OK; }
+
+	STDMETHOD(Invoke)(
+		DISPID dispidMember,
+		REFIID riid,
+		LCID lcid,
+		WORD wFlags,
+		DISPPARAMS* pdispparams,
+		VARIANT* pvarResult,
+		EXCEPINFO* pexcepinfo,
+		UINT* puArgErr)
+	{
+		return GetCurrentThreadId() != GetWindowThreadProcessId(m_hWnd, NULL) ?
+			CDispInvoke(this, dispidMember, riid, lcid, wFlags, pdispparams, pvarResult, pexcepinfo, puArgErr).Invoke(m_hWnd) :
+			IDispatchImpl::Invoke(dispidMember, riid, lcid, wFlags, pdispparams, pvarResult, pexcepinfo, puArgErr);
+	}
 
 // IViewObjectEx
 	DECLARE_VIEW_STATUS(0)
@@ -777,6 +841,7 @@ public:
 	STDMETHOD(RemoveBrowser)(/*[in]*/ short wbUIDToRemove);
 	STDMETHOD(get_Count)(/*[out, retval]*/ short *pVal);
 	//Added to pass focus to a WB on top of Zorder if any exists
+	LRESULT OnDispInvoke(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 	LRESULT OnSetFocus(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 	LRESULT OnSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 	LRESULT OnEraseBkgnd(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
