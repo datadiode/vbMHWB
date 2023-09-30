@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vbMHWB", "vbMHWB.vcxproj", "{A731A643-1F4F-4D39-A212-2FD53F324F14}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Unicode Debug|Compact2013_SDK_GSeries = Unicode Debug|Compact2013_SDK_GSeries
+		Unicode Debug|Toradex_CE800 = Unicode Debug|Toradex_CE800
+		Unicode Debug|x86 = Unicode Debug|x86
+		Unicode Release|Compact2013_SDK_GSeries = Unicode Release|Compact2013_SDK_GSeries
+		Unicode Release|Toradex_CE800 = Unicode Release|Toradex_CE800
+		Unicode Release|x86 = Unicode Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Debug|Compact2013_SDK_GSeries.ActiveCfg = Unicode Debug|Compact2013_SDK_GSeries
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Debug|Compact2013_SDK_GSeries.Build.0 = Unicode Debug|Compact2013_SDK_GSeries
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Debug|Toradex_CE800.ActiveCfg = Unicode Debug|Toradex_CE800
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Debug|Toradex_CE800.Build.0 = Unicode Debug|Toradex_CE800
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Debug|Toradex_CE800.Deploy.0 = Unicode Debug|Toradex_CE800
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Debug|x86.ActiveCfg = Unicode Debug|Win32
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Debug|x86.Build.0 = Unicode Debug|Win32
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Release|Compact2013_SDK_GSeries.ActiveCfg = Unicode Release|Compact2013_SDK_GSeries
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Release|Compact2013_SDK_GSeries.Build.0 = Unicode Release|Compact2013_SDK_GSeries
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Release|Compact2013_SDK_GSeries.Deploy.0 = Unicode Release|Compact2013_SDK_GSeries
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Release|Toradex_CE800.ActiveCfg = Unicode Release|Toradex_CE800
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Release|Toradex_CE800.Build.0 = Unicode Release|Toradex_CE800
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Release|Toradex_CE800.Deploy.0 = Unicode Release|Toradex_CE800
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Release|x86.ActiveCfg = Unicode Release|Win32
+		{A731A643-1F4F-4D39-A212-2FD53F324F14}.Unicode Release|x86.Build.0 = Unicode Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
